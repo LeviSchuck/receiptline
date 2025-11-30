@@ -7,10 +7,10 @@ Generate receipt printer commands and images.
 |---|---|---|---|
 |[ReceiptLine](https://www.npmjs.com/package/receiptline)|SDK for **Node.js**|Developers|Receipt description language processor|
 |[ReceiptIO](https://www.npmjs.com/package/receiptio)|Node.js Console App|Users|Print, Convert, Printer status|
-|[Designer](https://receiptline.github.io/designer/)|Tool|All|Edit, Preview|
-|[Receipt Markdown](https://marketplace.visualstudio.com/items?itemName=receiptline.receipt-markdown)|VS Code Extension|All|Edit, Preview|
 |[Receipt.js](https://github.com/receiptline/receiptjs)|SDK for **JavaScript**|Developers|Receipt description language processor<br>Print, Convert, Printer status|
-|[Receipt.js Designer](https://receiptline.github.io/receiptjs-designer/)|Tool|All|Edit, Preview, **Print**|
+|[Receipt.js Designer](https://receiptline.github.io/receiptjs-designer/)|Tool|All|Edit, Preview, Print|
+|[ReceiptSharp](https://www.nuget.org/packages/ReceiptSharp)|**.NET** Standard library|Developers|Receipt description language processor<br>Print, Convert, Printer status|
+|[Receipt Markdown](https://marketplace.visualstudio.com/items?itemName=receiptline.receipt-markdown)|VS Code Extension|All|Edit, Preview|
 
 "ReceiptLine" is a coined word from "Receipt" and "Streamline".  
 Make it more efficient by making it simpler!  
