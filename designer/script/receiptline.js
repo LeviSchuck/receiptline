@@ -1890,6 +1890,7 @@ limitations under the License.
     // SVG
     //
     const _svg = {
+        receiptId: '',
         svgWidth: 576,
         svgHeight: 0,
         svgContent: '',
@@ -1907,6 +1908,9 @@ limitations under the License.
         spacing: false,
         // start printing:
         open: function (printer) {
+            const url = URL.createObjectURL(new Blob());
+            URL.revokeObjectURL(url);
+            this.receiptId = url.slice(-36);
             this.svgWidth = printer.cpl * this.charWidth;
             this.svgHeight = 0;
             this.svgContent = '';
@@ -1968,7 +1972,7 @@ limitations under the License.
             }
             return `<svg width="${this.svgWidth}px" height="${this.svgHeight}px" viewBox="0 0 ${this.svgWidth} ${this.svgHeight}" preserveAspectRatio="xMinYMin meet" ` +
                 `xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">${p.style}` +
-                `<defs><filter id="receiptlineinvert" x="0" y="0" width="100%" height="100%"><feFlood flood-color="#000"/><feComposite in="SourceGraphic" operator="xor"/></filter></defs>` +
+                `<defs><filter id="receipt-${this.receiptId}" x="0" y="0" width="100%" height="100%"><feFlood flood-color="#000"/><feComposite in="SourceGraphic" operator="xor"/></filter></defs>` +
                 `<g font-family="${p.font}" fill="#000" font-size="${p.size}" dominant-baseline="text-after-edge" text-anchor="middle"${p.lang}>${this.svgContent}</g></svg>\n`;
         },
         // set print area:
@@ -2052,7 +2056,7 @@ limitations under the License.
         },
         // invert text:
         iv: function () {
-            this.textAttributes.filter = 'url(#receiptlineinvert)';
+            this.textAttributes.filter = `url(#receipt-${this.receiptId})`;
             return '';
         },
         // scale up text:
