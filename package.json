@@ -35,7 +35,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/levischuck/receiptline.git"
+    "url": "https://github.com/LeviSchuck/receiptline"
   },
   "scripts": {
     "build": "vite build",
