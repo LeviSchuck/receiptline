@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.5](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.0.4...receiptline-v0.0.5) (2026-01-09)
+
+
+### Bug Fixes
+
+* It sure would be better if I built it first ([a02c83a](https://github.com/LeviSchuck/receiptline/commit/a02c83ae23b29e033aebd5b0ac660772b3481254))
+
 ## [0.0.4](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.0.3...receiptline-v0.0.4) (2026-01-09)
 
 
