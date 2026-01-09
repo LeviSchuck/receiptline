@@ -5,6 +5,7 @@
     "": {
       "name": "receiptline",
       "dependencies": {
+        "@levischuck/tiny-encodings": "^0.2.11",
         "@levischuck/tiny-qr": "^0.0.5",
         "@levischuck/tiny-qr-svg": "^0.0.5",
       },
@@ -80,6 +81,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@levischuck/tiny-encodings": ["@levischuck/tiny-encodings@0.2.11", "", {}, "sha512-RARSzQhfMt6bgMZ+UWaYtf7SafKnCxF+1qwWeTEPvG0nd6vB3/3ezJsA8pA2g0lpdyVgEXk3n2E62mrarEZkcg=="],
 
     "@levischuck/tiny-qr": ["@levischuck/tiny-qr@0.0.5", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-uqbFH6Q6RQc8YC4t9ofNhf0ZVnENhXEpRbsau3FyaTYvctYQf/sYeA+vnfGj2eEg8z95WsvMXnZwGduzakjA/g=="],
 

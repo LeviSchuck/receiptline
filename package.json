@@ -15,6 +15,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@levischuck/tiny-encodings": "^0.2.11",
     "@levischuck/tiny-qr": "^0.0.5",
     "@levischuck/tiny-qr-svg": "^0.0.5"
   },
