@@ -1,0 +1,10 @@
+node_modules
+CLAUDE.md
+release-please-config.json
+.release-please-manifest.json
+bun.lock
+CHANGELOG.md
+vite.config.ts
+.gitignore
+.editorconfig
+example
