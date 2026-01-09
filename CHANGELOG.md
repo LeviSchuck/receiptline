@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.4](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.0.3...receiptline-v0.0.4) (2026-01-09)
+
+
+### Bug Fixes
+
+* Match provenance url (despite npm's protestations) ([ab103aa](https://github.com/LeviSchuck/receiptline/commit/ab103aaa344a95033993793ad71fabb22e336496))
+
 ## [0.0.3](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.0.2...receiptline-v0.0.3) (2026-01-09)
 
 
