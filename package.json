@@ -1,50 +1,52 @@
 {
-  "name": "receiptline",
-  "version": "3.0.0",
+  "name": "@levischuck/receiptline",
+  "module": "./dist/index.js",
   "description": "Markdown for receipts. Printable digital receipts. Generate receipt printer commands and images.",
-  "main": "./lib/receiptline.js",
-  "types": "./lib/receiptline.d.ts",
-  "directories": {
-    "example": "example",
-    "lib": "lib"
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "Open Foodservice System Consortium, Levi Schuck",
+  "version": "0.0.1",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "unplugin-dts": "^1.0.0-beta.6",
+    "vite": "^7.3.1"
   },
-  "scripts": {
-    "test": "node designer.js",
-    "start": "node designer.js"
+  "peerDependencies": {
+    "typescript": "^5"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/receiptline/receiptline.git"
+  "dependencies": {
+    "@levischuck/tiny-qr": "^0.0.5",
+    "@levischuck/tiny-qr-svg": "^0.0.5"
   },
   "keywords": [
-    "thermal",
-    "impact",
-    "printer",
-    "epson",
-    "escpos",
-    "star",
-    "starprnt",
-    "pos",
     "kiosk",
     "receipt",
     "invoice",
     "kitchen",
     "ticket",
     "svg",
-    "png",
     "markdown"
   ],
-  "author": "Open Foodservice System Consortium",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/receiptline/receiptline/issues"
+  "files": [
+    "dist",
+    "LICENSE.txt",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/levischuck/receiptline.git"
   },
-  "homepage": "https://github.com/receiptline/receiptline#readme",
-  "dependencies": {
-    "iconv-lite": "^0.6.0",
-    "pngjs": "^5.0.0"
+  "scripts": {
+    "build": "vite build",
+    "type-check": "tsc --noEmit"
   },
-  "devDependencies": {
-    "qrcode-generator": "^1.4.4"
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
