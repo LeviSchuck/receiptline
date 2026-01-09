@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.2](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.0.1...receiptline-v0.0.2) (2026-01-09)
+
+
+### Bug Fixes
+
+* Add tiny encodings dependency ([087d9a4](https://github.com/LeviSchuck/receiptline/commit/087d9a4038985b43c18172e38908a19621dca656))
+* Add tiny-encodings ([17265f0](https://github.com/LeviSchuck/receiptline/commit/17265f0a507936910dade9258943d617c77f0b61))
+
 ## [3.0.0] - 2025-11-30
 ### Changed
 - Japanese font for SVG/PNG output
