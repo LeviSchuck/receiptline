@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.3](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.0.2...receiptline-v0.0.3) (2026-01-09)
+
+
+### Bug Fixes
+
+* Use NPM Trusted Publisher configuration ([f4a436d](https://github.com/LeviSchuck/receiptline/commit/f4a436d5647ccbc0dc79d4e191f5fcc934fcff79))
+
 ## [0.0.2](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.0.1...receiptline-v0.0.2) (2026-01-09)
 
 
