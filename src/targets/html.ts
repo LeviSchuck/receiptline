@@ -59,6 +59,7 @@ export class HtmlTarget extends BaseTarget {
 	// Line building state - receipt printers queue commands until linefeed
 	currentPosition: number = 0;      // Current cursor position in characters
 	lineSegments: LineSegment[] = []; // Queued text segments for current line
+	pendingVrSvg: HtmlElement | null = null; // Pending vertical rules SVG for overlay with text
 
 	// start printing:
 	override async open(printer: ParsedPrinter): Promise<string> {
@@ -83,6 +84,7 @@ export class HtmlTarget extends BaseTarget {
 		// Reset line building state
 		this.currentPosition = 0;
 		this.lineSegments = [];
+		this.pendingVrSvg = null;
 		return '';
 	}
 
@@ -97,8 +99,8 @@ export class HtmlTarget extends BaseTarget {
 
 	// finish printing (async to support Promise nodes like QR code PNGs):
 	override async close(): Promise<string> {
-		// Flush any remaining line content
-		if (this.lineSegments.length > 0) {
+		// Flush any remaining line content or pending VR
+		if (this.lineSegments.length > 0 || this.pendingVrSvg) {
 			await this.lf();
 		}
 
@@ -212,24 +214,28 @@ export class HtmlTarget extends BaseTarget {
 		const w = this.charWidth;
 		const u = w / 2;
 		const v = (w + w) * height;
-		const totalWidth = widths.reduce((a, wid) => a + wid, 0) + widths.length + 1;
+		const totalWidthChars = widths.reduce((a, wid) => a + wid, 0) + widths.length + 1;
 
-		// Build SVG path for vertical lines
+		// Build SVG path for vertical lines (in charWidth-based coordinates)
 		let path = `M${u},0v${v}`;
-		let pos = w;
 		for (const width of widths) {
-			pos += width * w;
 			path += `m${width * w + w},${-v}v${v}`;
 		}
 
+		// Use viewBox to map charWidth-based path coordinates to ch-based width
+		// This ensures the VR lines align with text columns regardless of actual font width
+		const viewBoxWidth = totalWidthChars * w;
 		const svgNode: HtmlElement = {
 			type: 'svg',
 			props: {
-				width: `${totalWidth * w}`,
+				width: `${totalWidthChars}ch`,
 				height: `${v}`,
+				viewBox: `0 0 ${viewBoxWidth} ${v}`,
+				preserveAspectRatio: 'none',
 				style: {
-					display: 'block',
-					marginLeft: `${this.lineMargin}ch`,
+					position: 'absolute',
+					top: '0',
+					left: `${this.lineMargin}ch`,
 				},
 				children: {
 					type: 'path',
@@ -238,28 +244,33 @@ export class HtmlTarget extends BaseTarget {
 						fill: 'none',
 						stroke: 'black',
 						'stroke-width': '2',
+						'vector-effect': 'non-scaling-stroke',
 					},
 				} as HtmlElement,
 			},
 		};
 
-		this.contentNodes.push(svgNode);
+		// Store for overlay with text content at lf()
+		this.pendingVrSvg = svgNode;
 		return '';
 	}
 
 	// start rules:
 	override async vrstart(widths: number[]): Promise<string> {
 		const w = this.charWidth;
-		const u = w / 2;
-		const totalWidth = widths.reduce((a, wid) => a + wid, 0) + widths.length + 1;
+		const totalWidthChars = widths.reduce((a, wid) => a + wid, 0) + widths.length + 1;
+		const viewBoxWidth = totalWidthChars * w;
+		const viewBoxHeight = w * 2;
 
 		const svgPath = this.buildVrStartPath(widths);
 
 		const svgNode: HtmlElement = {
 			type: 'svg',
 			props: {
-				width: `${totalWidth * w}`,
-				height: `${w * 2}`,
+				width: `${totalWidthChars}ch`,
+				height: `${viewBoxHeight}`,
+				viewBox: `0 0 ${viewBoxWidth} ${viewBoxHeight}`,
+				preserveAspectRatio: 'none',
 				style: {
 					display: 'block',
 					marginLeft: `${this.lineMargin}ch`,
@@ -271,6 +282,7 @@ export class HtmlTarget extends BaseTarget {
 						fill: 'none',
 						stroke: 'black',
 						'stroke-width': '2',
+						'vector-effect': 'non-scaling-stroke',
 					},
 				} as HtmlElement,
 			},
@@ -298,15 +310,19 @@ export class HtmlTarget extends BaseTarget {
 	// stop rules:
 	override async vrstop(widths: number[]): Promise<string> {
 		const w = this.charWidth;
-		const totalWidth = widths.reduce((a, wid) => a + wid, 0) + widths.length + 1;
+		const totalWidthChars = widths.reduce((a, wid) => a + wid, 0) + widths.length + 1;
+		const viewBoxWidth = totalWidthChars * w;
+		const viewBoxHeight = w * 2;
 
 		const svgPath = this.buildVrStopPath(widths);
 
 		const svgNode: HtmlElement = {
 			type: 'svg',
 			props: {
-				width: `${totalWidth * w}`,
-				height: `${w * 2}`,
+				width: `${totalWidthChars}ch`,
+				height: `${viewBoxHeight}`,
+				viewBox: `0 0 ${viewBoxWidth} ${viewBoxHeight}`,
+				preserveAspectRatio: 'none',
 				style: {
 					display: 'block',
 					marginLeft: `${this.lineMargin}ch`,
@@ -318,6 +334,7 @@ export class HtmlTarget extends BaseTarget {
 						fill: 'none',
 						stroke: 'black',
 						'stroke-width': '2',
+						'vector-effect': 'non-scaling-stroke',
 					},
 				} as HtmlElement,
 			},
@@ -348,9 +365,11 @@ export class HtmlTarget extends BaseTarget {
 		const u = w / 2;
 
 		// Build the complex path for rule transitions
-		const totalWidth1 = widths1.reduce((a, wid) => a + wid, 0) + widths1.length + 1;
-		const totalWidth2 = widths2.reduce((a, wid) => a + wid, 0) + widths2.length + 1;
-		const maxWidth = Math.max(totalWidth1, totalWidth2);
+		const totalWidthChars1 = widths1.reduce((a, wid) => a + wid, 0) + widths1.length + 1;
+		const totalWidthChars2 = widths2.reduce((a, wid) => a + wid, 0) + widths2.length + 1;
+		const maxWidthChars = Math.max(totalWidthChars1, totalWidthChars2);
+		const viewBoxWidth = maxWidthChars * w;
+		const viewBoxHeight = w * 2;
 
 		// Path 1 (top)
 		let path1 = `M${u},0` + (dl > 0 ? `v${u}q0,${u},${u},${u}` : `v${w}h${u}`);
@@ -369,15 +388,17 @@ export class HtmlTarget extends BaseTarget {
 		const svgNode: HtmlElement = {
 			type: 'svg',
 			props: {
-				width: `${maxWidth * w}`,
-				height: `${w * 2}`,
+				width: `${maxWidthChars}ch`,
+				height: `${viewBoxHeight}`,
+				viewBox: `0 0 ${viewBoxWidth} ${viewBoxHeight}`,
+				preserveAspectRatio: 'none',
 				style: {
 					display: 'block',
 					marginLeft: `${this.lineMargin + Math.max(-dl, 0)}ch`,
 				},
 				children: [
-					{ type: 'path', props: { d: path1, fill: 'none', stroke: 'black', 'stroke-width': '2' } } as HtmlElement,
-					{ type: 'path', props: { d: path2, fill: 'none', stroke: 'black', 'stroke-width': '2' } } as HtmlElement,
+					{ type: 'path', props: { d: path1, fill: 'none', stroke: 'black', 'stroke-width': '2', 'vector-effect': 'non-scaling-stroke' } } as HtmlElement,
+					{ type: 'path', props: { d: path2, fill: 'none', stroke: 'black', 'stroke-width': '2', 'vector-effect': 'non-scaling-stroke' } } as HtmlElement,
 				],
 			},
 		};
@@ -515,6 +536,23 @@ export class HtmlTarget extends BaseTarget {
 		const flexNodes: HtmlNode[] = [];
 
 		if (this.lineSegments.length === 0) {
+			// If there's a pending VR but no text, still output the VR
+			if (this.pendingVrSvg) {
+				const wrapper: HtmlElement = {
+					type: 'div',
+					props: {
+						style: {
+							position: 'relative',
+							width: `${this.containerWidth}px`,
+							height: `${minHeight}px`,
+						},
+						children: this.pendingVrSvg,
+					},
+				};
+				this.contentNodes.push(wrapper);
+				this.pendingVrSvg = null;
+				this.estimatedHeight += minHeight;
+			}
 			// Reset line state for next line
 			this.lineHeight = 1;
 			this.lineSegments = [];
@@ -639,14 +677,45 @@ export class HtmlTarget extends BaseTarget {
 				style: {
 					display: 'flex',
 					flexDirection: 'row',
-					minHeight: `${minHeight}px`,
+					height: `${minHeight}px`,
 					width: `${totalWidthChars}ch`,
 				},
 				children: flexNodes,
 			},
 		};
 
-		this.contentNodes.push(lineNode);
+		// If we have pending VR, wrap in positioned container for overlay
+		if (this.pendingVrSvg) {
+			const wrapper: HtmlElement = {
+				type: 'div',
+				props: {
+					style: {
+						position: 'relative',
+						width: `${this.containerWidth}px`,
+						minHeight: `${minHeight}px`,
+					},
+					children: [
+						// VR SVG positioned absolutely behind text
+						this.pendingVrSvg,
+						// Text line positioned relatively on top
+						{
+							...lineNode,
+							props: {
+								...lineNode.props,
+								style: {
+									...(lineNode.props?.style as HtmlStyle),
+									position: 'relative',
+								},
+							},
+						} as HtmlElement,
+					],
+				},
+			};
+			this.contentNodes.push(wrapper);
+			this.pendingVrSvg = null;
+		} else {
+			this.contentNodes.push(lineNode);
+		}
 		this.estimatedHeight += minHeight;
 
 		// Reset line state for next line
