@@ -1,11 +1,11 @@
 # SVG-only ReceiptLine
 
-Markdown for receipts. Printable digital receipts. &#x1f9fe;  
+Markdown for receipts. Printable digital receipts. &#x1f9fe;
 Generate receipt printer commands and images.
 
-ReceiptLine is the receipt description language that expresses the output image of small roll paper.  
-It supports printing paper receipts using a receipt printer and displaying electronic receipts on a POS system or smartphone.  
-It can be described simply with receipt markdown text data that does not depend on the paper width.  
+ReceiptLine is the receipt description language that expresses the output image of small roll paper.
+It supports printing paper receipts using a receipt printer and displaying electronic receipts on a POS system or smartphone.
+It can be described simply with receipt markdown text data that does not depend on the paper width.
 
 # Installation
 
@@ -15,7 +15,7 @@ $ npm install @levischuck/receiptline
 
 # Usage
 
-`receiptline.transform()` method transforms ReceiptLine document to printer commands or SVG images.  
+`receiptline.transform()` method transforms ReceiptLine document to printer commands or SVG images.
 
 ```javascript
 import { transform, SvgTarget } from "@levischuck/receiptline";
@@ -26,16 +26,21 @@ const body = `Example Receipt
 (Merchant Copy)
 ---
 
-| Product | Qty| Price
+{w: * 4 8}
+{b:line}
+|Product | Qty| Price
 --
 |Pad Thai | 1| 14.99
 |Spring Roll | 1| 4.99
-| | | 
-| | Subtotal| 19.98
-| | Tax (6%)| 1.20
-| | Convenience Fee| 0.99
-| | Total| 22.17
-
+--
+{w:* 8}
+| Subtotal| 19.98
+| Tax (6%)| 1.20
+| Convenience Fee| 0.99
+| Total| 22.17
+---
+{b:space}
+{w:auto}
 Please Sign:
 
 
@@ -57,7 +62,7 @@ const {svg, width, height} = transform(body, {
 
 ## Method
 
-`transform(doc[, options])`  
+`transform(doc[, options])`
 
 ### Parameters
 
@@ -92,13 +97,13 @@ const {svg, width, height} = transform(body, {
 # Examples
 ### example/data/\*
 
-The documents (receipt markdown text) are the same as the examples in the OFSC ReceiptLine Specification.  
+The documents (receipt markdown text) are the same as the examples in the OFSC ReceiptLine Specification.
 
 # Grammar
 
 ## Structure
 
-The receipt is made of a table, which separates each column with a pipe `|`.  
+The receipt is made of a table, which separates each column with a pipe `|`.
 
 |Line|Content|Description|
 |---|---|---|
@@ -108,8 +113,8 @@ The receipt is made of a table, which separates each column with a pipe `|`.
 
 ## Alignment
 
-The column is attracted to the pipe `|` like a magnet.  
-<code>&#x2423;</code> means one or more whitespaces.  
+The column is attracted to the pipe `|` like a magnet.
+<code>&#x2423;</code> means one or more whitespaces.
 
 |Column|Description|
 |---|---|
@@ -119,7 +124,7 @@ The column is attracted to the pipe `|` like a magnet.
 
 ## Text
 
-The text is valid for any column.  
+The text is valid for any column.
 
 ```
 Asparagus | 0.99
@@ -129,13 +134,13 @@ Carrot | 2.99
 ^TOTAL | ^5.97
 ```
 
-Characters are printed in a monospace font (12 x 24 px).  
-Wide characters are twice as wide as Latin characters (24 x 24 px).  
-Control characters are ignored.  
+Characters are printed in a monospace font (12 x 24 px).
+Wide characters are twice as wide as Latin characters (24 x 24 px).
+Control characters are ignored.
 
 ## Special characters in text
 
-Special characters are assigned to characters that are rarely used in the receipt.  
+Special characters are assigned to characters that are rarely used in the receipt.
 
 |Special character|Description|
 |---|---|
@@ -159,7 +164,7 @@ Special characters are assigned to characters that are rarely used in the receip
 
 ## Escape sequences in text
 
-Escape special characters.  
+Escape special characters.
 
 |Escape sequence|Description|
 |---|---|
@@ -180,7 +185,7 @@ Escape special characters.
 
 ## Properties
 
-The property is valid for lines with a single column.  
+The property is valid for lines with a single column.
 
 ```
 { width: * 10; comment: the column width is specified in characters }
@@ -200,7 +205,7 @@ The property is valid for lines with a single column.
 
 ## Barcode options
 
-Barcode options are separated by commas or one or more whitespaces.  
+Barcode options are separated by commas or one or more whitespaces.
 
 |Barcode option|Description|
 |---|---|
@@ -218,7 +223,7 @@ Barcode options are separated by commas or one or more whitespaces.
 
 ## 2D code options
 
-2D code options are separated by commas or one or more whitespaces.  
+2D code options are separated by commas or one or more whitespaces.
 
 |2D code option|Description|
 |---|---|
@@ -228,7 +233,7 @@ Barcode options are separated by commas or one or more whitespaces.
 
 ## Special characters in property values
 
-Special characters in property values are different from special characters in text.  
+Special characters in property values are different from special characters in text.
 
 |Special character|Description|
 |---|---|
@@ -241,7 +246,7 @@ Special characters in property values are different from special characters in t
 
 ## Escape sequences in property values
 
-Escape special characters.  
+Escape special characters.
 
 |Escape sequence|Description|
 |---|---|
@@ -271,8 +276,8 @@ http://www.denso-wave.com/qrcode/faqpatent-e.html
 
 # Author
 
-Open Foodservice System Consortium  
-http://www.ofsc.or.jp/  
+Open Foodservice System Consortium
+http://www.ofsc.or.jp/
 
 Levi Schuck
 https://levischuck.com/

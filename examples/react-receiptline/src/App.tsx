@@ -6,16 +6,21 @@ const defaultReceipt = `Example Receipt
 (Merchant Copy)
 ---
 
-| Product | Qty| Price
+{w: * 4 8}
+{b:line}
+|Product | Qty| Price
 --
 |Pad Thai | 1| 14.99
 |Spring Roll | 1| 4.99
-| | |
-| | Subtotal| 19.98
-| | Tax (6%)| 1.20
-| | Convenience Fee| 0.99
-| | Total| 22.17
-
+--
+{w:* 8}
+| Subtotal| 19.98
+| Tax (6%)| 1.20
+| Convenience Fee| 0.99
+| Total| 22.17
+---
+{b:space}
+{w:auto}
 Please Sign:
 
 
@@ -25,6 +30,7 @@ Please Sign:
 {c:https://levischuck.com;o:qrcode,6}
 
 Please Take our Survey
+
 `;
 
 function App() {
