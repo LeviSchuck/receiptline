@@ -21,6 +21,7 @@ import type { Printer } from './types.ts';
 export { BaseTarget } from './targets/base.ts';
 export { SvgTarget } from './targets/svg.ts';
 export { HtmlTarget } from './targets/html.ts';
+export { AuditTarget } from './targets/audit.ts';
 
 /**
  * Transform ReceiptLine document to printer commands or SVG/HTML output.

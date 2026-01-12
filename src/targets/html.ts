@@ -1,17 +1,5 @@
 /*
-Copyright 2019 Open Foodservice System Consortium
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Copyright 2025 Levi Schuck
 */
 
 import { BaseTarget } from './base.ts';
@@ -34,6 +22,18 @@ function cleanStyle(style: Record<string, string | undefined>): HtmlStyle {
 }
 
 /**
+ * Represents a text segment queued for rendering on a line.
+ * Receipt printers accumulate positioning and text commands, then render on linefeed.
+ */
+interface LineSegment {
+	position: number;     // Absolute position in characters where this segment starts
+	text: string;         // The text content (already HTML escaped)
+	styles: HtmlStyle;    // CSS styles for this segment
+	scale: number;        // Horizontal scale factor (affects visual width)
+	charWidth: number;    // Width of text in characters (for position calculation)
+}
+
+/**
  * HTML target class for ReceiptLine commands.
  * Uses CSS for natural text flow and word wrapping instead of absolute positioning.
  */
@@ -53,9 +53,12 @@ export class HtmlTarget extends BaseTarget {
 
 	// DOM building state
 	contentNodes: HtmlNode[] = [];
-	currentLineNodes: HtmlNode[] = [];
 	currentStyles: HtmlStyle = {};
 	textScale: number = 1;
+
+	// Line building state - receipt printers queue commands until linefeed
+	currentPosition: number = 0;      // Current cursor position in characters
+	lineSegments: LineSegment[] = []; // Queued text segments for current line
 
 	// start printing:
 	override async open(printer: ParsedPrinter): Promise<string> {
@@ -71,9 +74,11 @@ export class HtmlTarget extends BaseTarget {
 		this.feedMinimum = Number(printer.charWidth * (printer.spacing ? 2.5 : 2));
 		this.spacing = printer.spacing;
 		this.contentNodes = [];
-		this.currentLineNodes = [];
 		this.currentStyles = {};
 		this.textScale = 1;
+		// Reset line building state
+		this.currentPosition = 0;
+		this.lineSegments = [];
 		return '';
 	}
 
@@ -85,8 +90,8 @@ export class HtmlTarget extends BaseTarget {
 	// finish printing (async to support Promise nodes like QR code PNGs):
 	override async close(): Promise<string> {
 		// Flush any remaining line content
-		if (this.currentLineNodes.length > 0) {
-			this.lf();
+		if (this.lineSegments.length > 0) {
+			await this.lf();
 		}
 
 		// Build font family based on encoding
@@ -162,14 +167,16 @@ export class HtmlTarget extends BaseTarget {
 	}
 
 	// set absolute print position:
-	override async absolute(_position: number): Promise<string> {
-		// HTML relies on natural flow, we track position for spacing but don't absolutely position
+	override async absolute(position: number): Promise<string> {
+		// Move cursor to absolute position in characters
+		this.currentPosition = position;
 		return '';
 	}
 
 	// set relative print position:
-	override async relative(_position: number): Promise<string> {
-		// HTML relies on natural flow
+	override async relative(position: number): Promise<string> {
+		// Move cursor forward by relative amount
+		this.currentPosition += position;
 		return '';
 	}
 
@@ -461,7 +468,7 @@ export class HtmlTarget extends BaseTarget {
 	}
 
 	// print text:
-	override async text(text: string, _encoding: Encoding): Promise<string> {
+	override async text(text: string, encoding: Encoding): Promise<string> {
 		// Escape HTML entities
 		const escaped = text
 			.replace(/&/g, '&amp;')
@@ -469,17 +476,21 @@ export class HtmlTarget extends BaseTarget {
 			.replace(/>/g, '&gt;')
 			.replace(/ /g, '\u00A0'); // Non-breaking spaces for receipt formatting
 
-		const spanNode: HtmlNode = Object.keys(this.currentStyles).length > 0
-			? {
-				type: 'span',
-				props: {
-					style: { ...this.currentStyles },
-					children: escaped,
-				},
-			} as HtmlElement
-			: escaped;
+		// Measure text width in characters (accounting for encoding)
+		const textWidth = this.measureText(text, encoding);
 
-		this.currentLineNodes.push(spanNode);
+		// Queue the segment with its position
+		const segment: LineSegment = {
+			position: this.currentPosition,
+			text: escaped,
+			styles: { ...this.currentStyles },
+			scale: this.textScale,
+			charWidth: textWidth,
+		};
+		this.lineSegments.push(segment);
+
+		// Advance cursor by the visual width (text width * horizontal scale)
+		this.currentPosition += textWidth * this.textScale;
 		return '';
 	}
 
@@ -488,26 +499,46 @@ export class HtmlTarget extends BaseTarget {
 		const h = this.lineHeight * this.charWidth * 2;
 		const minHeight = Math.max(h, this.feedMinimum);
 
-		const textAlign = this.lineAlign === 0 ? 'left' : this.lineAlign === 1 ? 'center' : 'right';
+		// Build positioned spans for each text segment
+		const segmentNodes: HtmlNode[] = this.lineSegments.map(segment => {
+			const leftPx = (this.lineMargin + segment.position) * this.charWidth;
 
+			const spanStyle: HtmlStyle = {
+				position: 'absolute',
+				left: `${leftPx}px`,
+				whiteSpace: 'pre',
+				...segment.styles,
+			};
+
+			return {
+				type: 'span',
+				props: {
+					style: spanStyle,
+					children: segment.text,
+				},
+			} as HtmlElement;
+		});
+
+		// Create line container with relative positioning
 		const lineNode: HtmlElement = {
 			type: 'div',
 			props: {
 				style: {
+					position: 'relative',
 					minHeight: `${minHeight}px`,
-					paddingLeft: `${this.lineMargin * this.charWidth}px`,
-					width: `${this.lineWidth * this.charWidth}px`,
-					textAlign,
-					whiteSpace: 'pre-wrap',
+					width: `${(this.lineMargin + this.lineWidth) * this.charWidth}px`,
 				},
-				children: this.currentLineNodes.length > 0 ? this.currentLineNodes : '\u00A0',
+				children: segmentNodes.length > 0 ? segmentNodes : '\u00A0',
 			},
 		};
 
 		this.contentNodes.push(lineNode);
 		this.estimatedHeight += minHeight;
+
+		// Reset line state for next line
 		this.lineHeight = 1;
-		this.currentLineNodes = [];
+		this.lineSegments = [];
+		this.currentPosition = 0;
 		return '';
 	}
 

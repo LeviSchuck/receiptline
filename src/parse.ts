@@ -2,6 +2,7 @@ import targets from './targets/index.ts';
 import { BaseTarget } from './targets/base.ts';
 import { SvgTarget } from './targets/svg.ts';
 import { HtmlTarget } from './targets/html.ts';
+import { AuditTarget } from './targets/audit.ts';
 import type { Barcode, Encoding, ParsedPrinter, Printer, QRCode, BaseTargetInterface } from './types.ts';
 
 // QR Code is a registered trademark of DENSO WAVE INCORPORATED.
@@ -83,6 +84,8 @@ export function parseOption(printer?: Partial<Printer>): ParsedPrinter {
 	if (untypedTarget instanceof HtmlTarget) {
 		target = untypedTarget;
 	} else if (untypedTarget instanceof SvgTarget) {
+		target = untypedTarget;
+	} else if (untypedTarget instanceof AuditTarget) {
 		target = untypedTarget;
 	} else if (untypedTarget instanceof BaseTarget) {
 		target = untypedTarget;

@@ -29,7 +29,7 @@ Please Take our Survey
 
 function App() {
   const [receiptText, setReceiptText] = useState(defaultReceipt);
-  const [targetType, setTargetType] = useState<'svg' | 'html'>('svg');
+  const [targetType, setTargetType] = useState<'svg' | 'html' | 'audit'>('svg');
   const [output, setOutput] = useState('');
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(0);
@@ -67,7 +67,7 @@ function App() {
               name="target"
               value="svg"
               checked={targetType === 'svg'}
-              onChange={(e) => setTargetType(e.target.value as 'svg')}
+              onChange={(e) => setTargetType(e.target.value as 'svg' | 'html' | 'audit')}
             />
             <span>SVG</span>
           </label>
@@ -77,9 +77,19 @@ function App() {
               name="target"
               value="html"
               checked={targetType === 'html'}
-              onChange={(e) => setTargetType(e.target.value as 'html')}
+              onChange={(e) => setTargetType(e.target.value as 'svg' | 'html' | 'audit')}
             />
             <span>HTML</span>
+          </label>
+          <label className="toggle">
+            <input
+              type="radio"
+              name="target"
+              value="audit"
+              checked={targetType === 'audit'}
+              onChange={(e) => setTargetType(e.target.value as 'svg' | 'html' | 'audit')}
+            />
+            <span>Audit</span>
           </label>
         </div>
       </header>
@@ -105,8 +115,8 @@ function App() {
             </div>
           ) : (
             <div className="preview">
-              {targetType === 'html' ? (
-                <div dangerouslySetInnerHTML={{ __html: output }} />
+              {targetType === 'audit' ? (
+                <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '12px', margin: 0, padding: '1rem', background: 'transparent', borderRadius: '4px' }}>{output}</pre>
               ) : (
                 <div dangerouslySetInnerHTML={{ __html: output }} />
               )}
