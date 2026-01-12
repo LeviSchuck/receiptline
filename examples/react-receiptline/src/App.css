@@ -1,0 +1,194 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.header {
+  padding: 1.5rem 2rem;
+  background: #252525;
+  border-bottom: 2px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.toggle:hover {
+  background: #333;
+  border-color: #4a4a4a;
+}
+
+.toggle input[type="radio"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.toggle input[type="radio"]:checked + span {
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.toggle span {
+  color: #b0b0b0;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  overflow: hidden;
+}
+
+.editor-panel,
+.preview-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.editor-panel {
+  background: #1e1e1e;
+  border-right: 2px solid #333;
+}
+
+.preview-panel {
+  background: #1a1a1a;
+}
+
+.editor-panel h2,
+.preview-panel h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #b0b0b0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.editor {
+  flex: 1;
+  background: #252525;
+  color: #e0e0e0;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.editor:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.1);
+}
+
+.editor::selection {
+  background: #3a5a7a;
+}
+
+.preview {
+  flex: 1;
+  overflow: auto;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 2rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.preview > div {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.error {
+  padding: 1rem;
+  background: #3a1a1a;
+  border: 1px solid #6a2a2a;
+  border-radius: 8px;
+  color: #ff8080;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+}
+
+.error strong {
+  color: #ff5555;
+}
+
+/* Scrollbar styling for dark theme */
+.editor::-webkit-scrollbar,
+.preview::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.editor::-webkit-scrollbar-track,
+.preview::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.editor::-webkit-scrollbar-thumb,
+.preview::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 5px;
+}
+
+.editor::-webkit-scrollbar-thumb:hover,
+.preview::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+
+  .editor-panel {
+    border-right: none;
+    border-bottom: 2px solid #333;
+  }
+}
