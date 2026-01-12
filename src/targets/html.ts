@@ -39,6 +39,7 @@ interface LineSegment {
  */
 export class HtmlTarget extends BaseTarget {
 	charWidth: number = 12;
+	charHeight: number = 24; // Default to charWidth * 2, can be overridden
 	containerWidth: number = 576;
 	estimatedHeight: number = 0;
 	lineMargin: number = 0;
@@ -50,6 +51,7 @@ export class HtmlTarget extends BaseTarget {
 	spacing: boolean = false;
 	defaultFont: string = "'Courier Prime', monospace";
 	actualFontCharacterWidth: number | undefined = undefined;
+	private explicitCharHeight: number | undefined = undefined;
 
 	// DOM building state
 	contentNodes: HtmlNode[] = [];
@@ -65,6 +67,8 @@ export class HtmlTarget extends BaseTarget {
 	override async open(printer: ParsedPrinter): Promise<string> {
 		await super.open(printer);
 		this.charWidth = printer.charWidth;
+		// Set charHeight: use explicit value if set, otherwise default to charWidth * 2
+		this.charHeight = this.explicitCharHeight ?? (printer.charWidth * 2);
 		// Recalculate cpl based on actual font character width if set
 		if (this.actualFontCharacterWidth !== undefined && this.actualFontCharacterWidth > 0) {
 			this._cpl = Math.floor(printer.cpl * printer.charWidth / this.actualFontCharacterWidth);
@@ -76,7 +80,7 @@ export class HtmlTarget extends BaseTarget {
 		this.lineWidth = this.cpl;
 		this.lineHeight = 1;
 		this.textEncoding = printer.encoding;
-		this.feedMinimum = Number(printer.charWidth * (printer.spacing ? 2.5 : 2));
+		this.feedMinimum = Number(printer.spacing ? this.charHeight * 1.25 : this.charHeight);
 		this.spacing = printer.spacing;
 		this.contentNodes = [];
 		this.currentStyles = {};
@@ -95,6 +99,10 @@ export class HtmlTarget extends BaseTarget {
 
 	setActualFontCharacterWidth(width: number | undefined): void {
 		this.actualFontCharacterWidth = width;
+	}
+
+	setCharHeight(height: number | undefined): void {
+		this.explicitCharHeight = height;
 	}
 
 	// finish printing (async to support Promise nodes like QR code PNGs):
@@ -213,7 +221,7 @@ export class HtmlTarget extends BaseTarget {
 		// For HTML, render vertical rules using SVG for precision
 		const w = this.charWidth;
 		const u = w / 2;
-		const v = (w + w) * height;
+		const v = this.charHeight * height;
 		const totalWidthChars = widths.reduce((a, wid) => a + wid, 0) + widths.length + 1;
 
 		// Build SVG path for vertical lines (in charWidth-based coordinates)
@@ -260,7 +268,7 @@ export class HtmlTarget extends BaseTarget {
 		const w = this.charWidth;
 		const totalWidthChars = widths.reduce((a, wid) => a + wid, 0) + widths.length + 1;
 		const viewBoxWidth = totalWidthChars * w;
-		const viewBoxHeight = w * 2;
+		const viewBoxHeight = w * 2; // Path coordinates use charWidth-based units
 
 		const svgPath = this.buildVrStartPath(widths);
 
@@ -312,7 +320,7 @@ export class HtmlTarget extends BaseTarget {
 		const w = this.charWidth;
 		const totalWidthChars = widths.reduce((a, wid) => a + wid, 0) + widths.length + 1;
 		const viewBoxWidth = totalWidthChars * w;
-		const viewBoxHeight = w * 2;
+		const viewBoxHeight = w * 2; // Path coordinates use charWidth-based units
 
 		const svgPath = this.buildVrStopPath(widths);
 
@@ -369,7 +377,7 @@ export class HtmlTarget extends BaseTarget {
 		const totalWidthChars2 = widths2.reduce((a, wid) => a + wid, 0) + widths2.length + 1;
 		const maxWidthChars = Math.max(totalWidthChars1, totalWidthChars2);
 		const viewBoxWidth = maxWidthChars * w;
-		const viewBoxHeight = w * 2;
+		const viewBoxHeight = w * 2; // Path coordinates use charWidth-based units
 
 		// Path 1 (top)
 		let path1 = `M${u},0` + (dl > 0 ? `v${u}q0,${u},${u},${u}` : `v${w}h${u}`);
@@ -409,7 +417,7 @@ export class HtmlTarget extends BaseTarget {
 
 	// set line spacing and feed new line:
 	override async vrlf(vr: boolean): Promise<string> {
-		this.feedMinimum = Number(this.charWidth * (!vr && this.spacing ? 2.5 : 2));
+		this.feedMinimum = Number(!vr && this.spacing ? this.charHeight * 1.25 : this.charHeight);
 		return await this.lf();
 	}
 
@@ -421,7 +429,7 @@ export class HtmlTarget extends BaseTarget {
 				style: {
 					display: 'flex',
 					alignItems: 'center',
-					height: `${this.charWidth * 2}px`,
+					height: `${this.charHeight}px`,
 					marginTop: '4px',
 					marginBottom: '4px',
 				},
@@ -452,7 +460,7 @@ export class HtmlTarget extends BaseTarget {
 		};
 
 		this.contentNodes.push(cutNode);
-		this.estimatedHeight += this.charWidth * 2;
+		this.estimatedHeight += this.charHeight;
 		return '';
 	}
 
@@ -526,7 +534,7 @@ export class HtmlTarget extends BaseTarget {
 
 	// feed new line:
 	override async lf(): Promise<string> {
-		const h = this.lineHeight * this.charWidth * 2;
+		const h = this.lineHeight * this.charHeight;
 		const minHeight = Math.max(h, this.feedMinimum);
 
 		// Calculate total width in characters
@@ -825,7 +833,7 @@ export class HtmlTarget extends BaseTarget {
 
 		if (h !== undefined && 'length' in bar && bar.length !== undefined && bar.widths) {
 			const width = bar.length;
-			const height = h + (bar.hri ? this.charWidth * 2 + 2 : 0);
+			const height = h + (bar.hri ? this.charHeight + 2 : 0);
 
 			// Build SVG path for barcode
 			let path = '';

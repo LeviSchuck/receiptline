@@ -38,6 +38,7 @@ function App() {
   const [targetType, setTargetType] = useState<'svg' | 'html' | 'audit'>('svg');
   const [cpl, setCpl] = useState(48);
   const [charWidth, setCharWidth] = useState(12);
+  const [charHeight, setCharHeight] = useState(24);
   const [actualFontWidth, setActualFontWidth] = useState(13.2);
   const [output, setOutput] = useState('');
   const [width, setWidth] = useState(0);
@@ -53,13 +54,14 @@ function App() {
         const htmlTarget = new HtmlTarget();
         htmlTarget.setDefaultFont("'Google Sans Code', monospace");
         htmlTarget.setActualFontCharacterWidth(actualFontWidth);
+        htmlTarget.setCharHeight(charHeight);
         return htmlTarget;
       case 'audit':
         return new AuditTarget();
       default:
         return new SvgTarget();
     }
-  }, [targetType, actualFontWidth]);
+  }, [targetType, actualFontWidth, charHeight]);
 
   useEffect(() => {
     const generateReceipt = async () => {
@@ -80,7 +82,7 @@ function App() {
     };
 
     generateReceipt();
-  }, [receiptText, target, cpl, charWidth, actualFontWidth]);
+  }, [receiptText, target, cpl, charWidth, charHeight, actualFontWidth]);
 
   return (
     <div className="app">
@@ -139,6 +141,18 @@ function App() {
                 step="0.1"
                 value={charWidth}
                 onChange={(e) => setCharWidth(parseFloat(e.target.value) || 12)}
+              />
+            </label>
+            <label className="config-label">
+              <span>Character height:</span>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                step="0.1"
+                value={charHeight}
+                onChange={(e) => setCharHeight(parseFloat(e.target.value) || 24)}
+                disabled={targetType !== 'html'}
               />
             </label>
             <label className="config-label">

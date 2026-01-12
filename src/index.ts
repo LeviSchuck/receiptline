@@ -88,7 +88,7 @@ export async function transform(doc: string, printer: Printer): Promise<{svg: st
 		return {
 			svg: result,
 			width: ptr.target.calculatedWidth(),
-			height: ptr.target.calculatedHeight()
+			height: Math.round(ptr.target.calculatedHeight())
 		};
 	} finally {
 		// Always unlock the target
