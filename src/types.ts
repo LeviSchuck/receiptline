@@ -12,6 +12,7 @@ export type ParsedPrinter = {
 };
 
 export interface BaseTargetInterface {
+	readonly cpl: number;
 	lock(timeout?: number): Promise<void>;
 	unlock(): void;
 	measureText(text: string, encoding: Encoding): number;

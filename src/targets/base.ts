@@ -23,6 +23,15 @@ export class BaseTarget implements BaseTargetInterface {
 	private locked: boolean = false;
 	private lockPromise: Promise<void> | null = null;
 	private lockResolve: (() => void) | null = null;
+	protected _cpl: number = 48;
+
+	/**
+	 * Get characters per line.
+	 * @returns {number} characters per line
+	 */
+	get cpl(): number {
+		return this._cpl;
+	}
 
 	/**
 	 * Lock the target for exclusive use.
@@ -257,6 +266,7 @@ export class BaseTarget implements BaseTargetInterface {
 	 * @returns {Promise<string>} commands
 	 */
 	async open(printer: ParsedPrinter): Promise<string> {
+		this._cpl = printer.cpl;
 		return '';
 	}
 

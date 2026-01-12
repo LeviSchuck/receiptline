@@ -30,9 +30,10 @@ export class AuditTarget extends BaseTarget {
 	 * @returns {Promise<string>} empty string
 	 */
 	override async open(printer: ParsedPrinter): Promise<string> {
+		await super.open(printer);
 		// Reset logs for a fresh audit
 		this.logs = [];
-		this.logs.push(`open(cpl: ${printer.cpl}, charWidth: ${printer.charWidth}, encoding: ${printer.encoding}, spacing: ${printer.spacing}, margin: ${printer.margin}, marginRight: ${printer.marginRight})`);
+		this.logs.push(`open(cpl: ${this.cpl}, charWidth: ${printer.charWidth}, encoding: ${printer.encoding}, spacing: ${printer.spacing}, margin: ${printer.margin}, marginRight: ${printer.marginRight})`);
 		return '';
 	}
 

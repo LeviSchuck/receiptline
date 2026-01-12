@@ -447,7 +447,7 @@ export async function createLine(line: ParsedColumn[], printer: ParsedPrinter, s
 	let columns: ParsedColumn[] = line.filter(el => el.width !== 0);
 	// remove overflowing columns
 	if (text) {
-		columns = columns.slice(0, Math.floor(column.border < 0 ? (printer.cpl - 1) / 2 : (printer.cpl + column.border) / (column.border + 1)));
+		columns = columns.slice(0, Math.floor(column.border < 0 ? (printer.target.cpl - 1) / 2 : (printer.target.cpl + column.border) / (column.border + 1)));
 	}
 	// fixed columns
 	const f: ParsedColumn[] = columns.filter(el => el.width > 0);
@@ -456,7 +456,7 @@ export async function createLine(line: ParsedColumn[], printer: ParsedPrinter, s
 	// reserved width
 	let u: number = f.reduce((a, el) => a + el.width, 0);
 	// free width
-	let v: number = printer.cpl - u;
+	let v: number = printer.target.cpl - u;
 	// subtract border width from free width
 	if (text && columns.length > 0) {
 		v -= column.border < 0 ? columns.length + 1 : (columns.length - 1) * column.border;
@@ -476,7 +476,7 @@ export async function createLine(line: ParsedColumn[], printer: ParsedPrinter, s
 	}
 	// print area
 	const left: number = Math.floor(v * column.alignment / 2);
-	const width: number = printer.cpl - v;
+	const width: number = printer.target.cpl - v;
 	const right: number = v - left;
 	// process text
 	if (text) {
@@ -505,7 +505,7 @@ export async function createLine(line: ParsedColumn[], printer: ParsedPrinter, s
 				const r: number = Math.min(right, state.rules.right);
 				result.push(
 					await printer.target.normal() +
-					await printer.target.area(l, printer.cpl - l - r, r) +
+					await printer.target.area(l, printer.target.cpl - l - r, r) +
 					await printer.target.align(0) +
 					await printer.target.vrhr(state.rules.widths, widths, m, m + w) +
 					await printer.target.lf()

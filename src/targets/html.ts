@@ -39,7 +39,6 @@ interface LineSegment {
  */
 export class HtmlTarget extends BaseTarget {
 	charWidth: number = 12;
-	cpl: number = 48;
 	containerWidth: number = 576;
 	estimatedHeight: number = 0;
 	lineMargin: number = 0;
@@ -49,7 +48,8 @@ export class HtmlTarget extends BaseTarget {
 	textEncoding: Encoding = 'multilingual';
 	feedMinimum: number = 24;
 	spacing: boolean = false;
-	defaultFont: string = 'monospace';
+	defaultFont: string = "'Courier Prime', monospace";
+	actualFontCharacterWidth: number | undefined = undefined;
 
 	// DOM building state
 	contentNodes: HtmlNode[] = [];
@@ -62,13 +62,17 @@ export class HtmlTarget extends BaseTarget {
 
 	// start printing:
 	override async open(printer: ParsedPrinter): Promise<string> {
+		await super.open(printer);
 		this.charWidth = printer.charWidth;
-		this.cpl = printer.cpl;
+		// Recalculate cpl based on actual font character width if set
+		if (this.actualFontCharacterWidth !== undefined && this.actualFontCharacterWidth > 0) {
+			this._cpl = Math.floor(printer.cpl * printer.charWidth / this.actualFontCharacterWidth);
+		}
 		this.containerWidth = printer.cpl * printer.charWidth;
 		this.estimatedHeight = 0;
 		this.lineMargin = 0;
 		this.lineAlign = 0;
-		this.lineWidth = printer.cpl;
+		this.lineWidth = this.cpl;
 		this.lineHeight = 1;
 		this.textEncoding = printer.encoding;
 		this.feedMinimum = Number(printer.charWidth * (printer.spacing ? 2.5 : 2));
@@ -84,7 +88,11 @@ export class HtmlTarget extends BaseTarget {
 
 	setDefaultFont(font: string): string {
 		this.defaultFont = font;
-		return "'Courier Prime'";
+		return this.defaultFont;
+	}
+
+	setActualFontCharacterWidth(width: number | undefined): void {
+		this.actualFontCharacterWidth = width;
 	}
 
 	// finish printing (async to support Promise nodes like QR code PNGs):
@@ -132,6 +140,7 @@ export class HtmlTarget extends BaseTarget {
 			boxSizing: 'border-box',
 			wordWrap: 'break-word',
 			overflowWrap: 'break-word',
+			overflow: 'hidden',
 		};
 
 		const containerProps: HtmlProps = {
@@ -187,8 +196,8 @@ export class HtmlTarget extends BaseTarget {
 			props: {
 				style: {
 					borderTop: '2px solid black',
-					marginLeft: `${this.lineMargin * this.charWidth}px`,
-					width: `${width * this.charWidth}px`,
+					marginLeft: `${this.lineMargin}ch`,
+					width: `${width}ch`,
 					height: '0',
 				},
 			},
@@ -220,7 +229,7 @@ export class HtmlTarget extends BaseTarget {
 				height: `${v}`,
 				style: {
 					display: 'block',
-					marginLeft: `${this.lineMargin * w}px`,
+					marginLeft: `${this.lineMargin}ch`,
 				},
 				children: {
 					type: 'path',
@@ -253,7 +262,7 @@ export class HtmlTarget extends BaseTarget {
 				height: `${w * 2}`,
 				style: {
 					display: 'block',
-					marginLeft: `${this.lineMargin * w}px`,
+					marginLeft: `${this.lineMargin}ch`,
 				},
 				children: {
 					type: 'path',
@@ -300,7 +309,7 @@ export class HtmlTarget extends BaseTarget {
 				height: `${w * 2}`,
 				style: {
 					display: 'block',
-					marginLeft: `${this.lineMargin * w}px`,
+					marginLeft: `${this.lineMargin}ch`,
 				},
 				children: {
 					type: 'path',
@@ -364,7 +373,7 @@ export class HtmlTarget extends BaseTarget {
 				height: `${w * 2}`,
 				style: {
 					display: 'block',
-					marginLeft: `${(this.lineMargin + Math.max(-dl, 0)) * w}px`,
+					marginLeft: `${this.lineMargin + Math.max(-dl, 0)}ch`,
 				},
 				children: [
 					{ type: 'path', props: { d: path1, fill: 'none', stroke: 'black', 'stroke-width': '2' } } as HtmlElement,
@@ -499,36 +508,141 @@ export class HtmlTarget extends BaseTarget {
 		const h = this.lineHeight * this.charWidth * 2;
 		const minHeight = Math.max(h, this.feedMinimum);
 
-		// Build positioned spans for each text segment
-		const segmentNodes: HtmlNode[] = this.lineSegments.map(segment => {
-			const leftPx = (this.lineMargin + segment.position) * this.charWidth;
+		// Calculate total width in characters
+		const totalWidthChars = this.lineMargin + this.lineWidth;
 
-			const spanStyle: HtmlStyle = {
-				position: 'absolute',
-				left: `${leftPx}px`,
-				whiteSpace: 'pre',
-				...segment.styles,
+		// Build flexbox nodes: spacers and segments with width in ch units
+		const flexNodes: HtmlNode[] = [];
+
+		if (this.lineSegments.length === 0) {
+			// Reset line state for next line
+			this.lineHeight = 1;
+			this.lineSegments = [];
+			this.currentPosition = 0;
+			return '';
+		} else {
+			// Sort segments by position to ensure correct order
+			const sortedSegments = [...this.lineSegments].sort((a, b) => a.position - b.position);
+
+			let lastEndPosition = 0;
+
+			// Helper to quantize width to nearest character width
+			const quantizeWidth = (widthChars: number): number => {
+				return Math.floor(widthChars);
 			};
 
-			return {
-				type: 'span',
-				props: {
-					style: spanStyle,
-					children: segment.text,
-				},
-			} as HtmlElement;
-		});
+			// Helper to calculate quantized width in ch units
+			const quantizedCh = (widthChars: number): string => {
+				const quantized = quantizeWidth(widthChars);
+				return `${quantized}ch`;
+			};
 
-		// Create line container with relative positioning
+			// Helper to parse ch value from flexBasis string
+			const parseCh = (basis: string): number => {
+				const match = basis.match(/^(\d+(?:\.\d+)?)ch$/);
+				return match ? parseFloat(match[1]!) : 0;
+			};
+
+			for (let i = 0; i < sortedSegments.length; i++) {
+				const segment = sortedSegments[i]!;
+				const segmentStart = this.lineMargin + segment.position;
+				const segmentWidth = segment.charWidth * segment.scale;
+
+				// Merge spacer with previous column if there's a gap
+				if (segmentStart > lastEndPosition && flexNodes.length > 0) {
+					const spacerWidth = segmentStart - lastEndPosition;
+					const lastNode = flexNodes[flexNodes.length - 1] as HtmlElement;
+
+					if (lastNode && lastNode.props && lastNode.props.style && typeof lastNode.props.style === 'object' && !Array.isArray(lastNode.props.style)) {
+						const style = lastNode.props.style as HtmlStyle;
+						// Get current flexBasis ch value and add spacer width
+						const currentBasis = style.flexBasis as string | undefined;
+						if (currentBasis) {
+							const currentWidthChars = parseCh(currentBasis);
+							const combinedWidthChars = currentWidthChars + spacerWidth;
+							style.flexBasis = quantizedCh(combinedWidthChars);
+						} else {
+							// No existing basis, just add spacer
+							style.flexBasis = quantizedCh(spacerWidth);
+						}
+					}
+				} else if (segmentStart > lastEndPosition && flexNodes.length === 0) {
+					// First element has leading spacer - create initial spacer column
+					const spacerWidth = segmentStart - lastEndPosition;
+					flexNodes.push({
+						type: 'span',
+						props: {
+							style: {
+								flexBasis: quantizedCh(spacerWidth),
+							},
+						},
+					} as HtmlElement);
+				}
+
+				// Add the text segment with quantized width in ch units
+				const segmentCh = quantizedCh(segmentWidth);
+
+				// Separate layout styles (for flex cell) from content styles (for text content)
+				const layoutStyle: HtmlStyle = {
+					flexBasis: segmentCh,
+					whiteSpace: 'pre',
+				};
+
+				// Content styles should only apply to the text content, not the flex cell
+				const hasContentStyles = segment.styles && Object.keys(segment.styles).length > 0;
+				const contentStyle = hasContentStyles ? segment.styles : undefined;
+
+				// Create outer flex cell with layout styles
+				const outerSpan: HtmlElement = {
+					type: 'span',
+					props: {
+						style: layoutStyle,
+						children: hasContentStyles ? {
+							// Wrap text in inner span with content styles
+							type: 'span',
+							props: {
+								style: contentStyle,
+								children: segment.text,
+							},
+						} as HtmlElement : segment.text,
+					},
+				};
+
+				flexNodes.push(outerSpan);
+
+				lastEndPosition = segmentStart + segmentWidth;
+			}
+
+			// Merge final spacer with last column if needed
+			if (lastEndPosition < totalWidthChars && flexNodes.length > 0) {
+				const finalSpacerWidth = totalWidthChars - lastEndPosition;
+				const lastNode = flexNodes[flexNodes.length - 1] as HtmlElement;
+
+				if (lastNode && lastNode.props && lastNode.props.style && typeof lastNode.props.style === 'object' && !Array.isArray(lastNode.props.style)) {
+					const style = lastNode.props.style as HtmlStyle;
+					const currentBasis = style.flexBasis as string | undefined;
+					if (currentBasis) {
+						const currentWidthChars = parseCh(currentBasis);
+						const combinedWidthChars = currentWidthChars + finalSpacerWidth;
+						style.flexBasis = quantizedCh(combinedWidthChars);
+					} else {
+						style.flexBasis = quantizedCh(finalSpacerWidth);
+					}
+				}
+			}
+		}
+
+		// Create line container with flexbox row layout
 		const lineNode: HtmlElement = {
 			type: 'div',
 			props: {
 				style: {
-					position: 'relative',
+					display: 'flex',
+					flexDirection: 'row',
 					minHeight: `${minHeight}px`,
-					width: `${(this.lineMargin + this.lineWidth) * this.charWidth}px`,
+					width: `${totalWidthChars}ch`,
 				},
-				children: segmentNodes.length > 0 ? segmentNodes : '\u00A0',
+				children: flexNodes,
 			},
 		};
 
@@ -559,7 +673,7 @@ export class HtmlTarget extends BaseTarget {
 				src: `data:image/png;base64,${image}`,
 				style: cleanStyle({
 					display: 'block',
-					maxWidth: `${this.lineWidth * this.charWidth}px`,
+					maxWidth: `${this.lineWidth}ch`,
 				}),
 			},
 		};
@@ -570,8 +684,8 @@ export class HtmlTarget extends BaseTarget {
 			props: {
 				style: {
 					textAlign,
-					paddingLeft: `${this.lineMargin * this.charWidth}px`,
-					width: `${this.lineWidth * this.charWidth}px`,
+					paddingLeft: `${this.lineMargin}ch`,
+					width: `${this.lineWidth}ch`,
 				},
 				children: imgNode,
 			},
@@ -622,8 +736,8 @@ export class HtmlTarget extends BaseTarget {
 			props: {
 				style: {
 					textAlign,
-					paddingLeft: `${this.lineMargin * this.charWidth}px`,
-					width: `${this.lineWidth * this.charWidth}px`,
+					paddingLeft: `${this.lineMargin}ch`,
+					width: `${this.lineWidth}ch`,
 				},
 				children: qrPromise, // Promise will be resolved by awaitHtmlNode
 			},
@@ -699,8 +813,8 @@ export class HtmlTarget extends BaseTarget {
 				props: {
 					style: {
 						textAlign,
-						paddingLeft: `${this.lineMargin * this.charWidth}px`,
-						width: `${this.lineWidth * this.charWidth}px`,
+						paddingLeft: `${this.lineMargin}ch`,
+						width: `${this.lineWidth}ch`,
 					},
 					children: svgNode,
 				},

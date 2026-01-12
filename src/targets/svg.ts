@@ -47,14 +47,15 @@ export class SvgTarget extends BaseTarget {
 
 	// start printing:
 	override async open(printer: ParsedPrinter): Promise<string> {
+		await super.open(printer);
 		this.receiptId = crypto.randomUUID();
 		this.charWidth = printer.charWidth;
-		this.svgWidth = printer.cpl * printer.charWidth;
+		this.svgWidth = this.cpl * printer.charWidth;
 		this.svgHeight = 0;
 		this.svgContent = '';
 		this.lineMargin = 0;
 		this.lineAlign = 0;
-		this.lineWidth = printer.cpl;
+		this.lineWidth = this.cpl;
 		this.lineHeight = 1;
 		this.textElement = '';
 		this.textAttributes = {};
