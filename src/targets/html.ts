@@ -784,27 +784,25 @@ export class HtmlTarget extends BaseTarget {
 		const margin = symbol.quietZone ? 4 : 0;
 
 		// Create a Promise that generates the PNG and returns an img element
-		const qrPromise: Promise<HtmlNode> = (async () => {
-			const { bytes, width, height } = await toPng(qr, {
-				moduleSize: c,
-				margin,
-			});
+		const { bytes, width, height } = await toPng(qr, {
+			moduleSize: c,
+			margin,
+		});
 
-			const base64 = encodeBase64(bytes);
+		const base64 = encodeBase64(bytes);
 
-			return {
-				type: 'img',
-				props: {
-					src: `data:image/png;base64,${base64}`,
-					width: `${width}`,
-					height: `${height}`,
-					style: {
-						display: 'block',
-						imageRendering: 'pixelated',
-					},
+		const qrHtml = {
+			type: 'img',
+			props: {
+				src: `data:image/png;base64,${base64}`,
+				width: `${width}`,
+				height: `${height}`,
+				style: {
+					display: 'block',
+					imageRendering: 'pixelated',
 				},
-			} as HtmlElement;
-		})();
+			},
+		} as HtmlElement;
 
 		// Wrap in container for alignment
 		const textAlign = this.lineAlign === 0 ? 'left' : this.lineAlign === 1 ? 'center' : 'right';
@@ -816,13 +814,12 @@ export class HtmlTarget extends BaseTarget {
 					paddingLeft: `${this.lineMargin}ch`,
 					width: `${this.lineWidth}ch`,
 				},
-				children: qrPromise, // Promise will be resolved by awaitHtmlNode
+				children: [qrHtml],
 			},
 		};
 
 		this.contentNodes.push(containerNode);
-		const size = (qr.width + margin * 2) * c;
-		this.estimatedHeight += size;
+		this.estimatedHeight += height;
 		return '';
 	}
 
