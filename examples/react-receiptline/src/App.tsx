@@ -3,6 +3,7 @@ import { transform, SvgTarget, HtmlTarget, AuditTarget, BaseTarget } from '@levi
 import './App.css';
 
 const defaultReceipt = `Example Receipt
+{image:iVBORw0KGgoAAAANSUhEUgAAAHAAAAAYCAMAAAAVmYlOAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZQTFRFAAAA////pdmf3QAAAAlwSFlzAAAuIwAALiMBeKU/dgAAALZJREFUSMftlVESgCAIROH+l25qLIUFRMfpw9EvU5ZnuBTxz4MOcAsglRFEyU0lCKUR0Nc5wLI6A3zTpIGtYBbIo0BeA1TFfeYpoL4VyBIC69I9HQC+kZilRDklFblooKTG2pckMo0IGjGNFOLxrLaoDz7QbAsUymgyG1/sxkB84TSQ3cuL2sK8I7ek6NIuMOQvASqX5oE+kfAIbeeRfuqYllj1HtrC0bceypUUPkraOOePvwvwAi2zCEzzMOsBAAAAAElFTkSuQmCC}
 (Merchant Copy)
 ---
 
@@ -29,9 +30,7 @@ Please Sign:
 
 {c:https://levischuck.com;o:qrcode,6}
 
-Please Take our Survey
-
-`;
+Please Take our Survey`;
 
 function App() {
   const [receiptText, setReceiptText] = useState(defaultReceipt);

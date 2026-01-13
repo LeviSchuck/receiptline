@@ -21,23 +21,23 @@ $ npm install @levischuck/receiptline
 import { transform, SvgTarget, HtmlTarget } from "@levischuck/receiptline";
 
 const body = `Example Receipt
+{image:iVBORw0KGgoAAAANSUhEUgAAAHAAAAAYCAMAAAAVmYlOAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZQTFRFAAAA////pdmf3QAAAAlwSFlzAAAuIwAALiMBeKU/dgAAALZJREFUSMftlVESgCAIROH+l25qLIUFRMfpw9EvU5ZnuBTxz4MOcAsglRFEyU0lCKUR0Nc5wLI6A3zTpIGtYBbIo0BeA1TFfeYpoL4VyBIC69I9HQC+kZilRDklFblooKTG2pckMo0IGjGNFOLxrLaoDz7QbAsUymgyG1/sxkB84TSQ3cuL2sK8I7ek6NIuMOQvASqX5oE+kfAIbeeRfuqYllj1HtrC0bceypUUPkraOOePvwvwAi2zCEzzMOsBAAAAAElFTkSuQmCC}
 (Merchant Copy)
 ---
 
 {w: * 4 8}
 {b:line}
-||Product | Qty| Price
-|--
-||Pad Thai | 1| 14.99
-||Spring Roll | 1| 4.99
-|--
+|Product | Qty| Price
+--
+|Pad Thai | 1| 14.99
+|Spring Roll | 1| 4.99
+--
 {w:* 8}
-|| Subtotal| 19.98
-|| Tax (6%)| 1.20
-|| Convenience Fee| 0.99
-|| Total| 22.17
+| Subtotal| 19.98
+| Tax (6%)| 1.20
+| Convenience Fee| 0.99
+| Total| 22.17
 ---
-
 {b:space}
 {w:auto}
 Please Sign:
@@ -105,7 +105,7 @@ c
   - print margin (right) (range: `0` - `24`, default: `0`)
 - `target` What implementation to use (SvgTarget for SVG output, HtmlTarget for HTML output, instantiate your own to set additional configuration like font)
 - `encoding`
-  - `multilingual` (default), others exist if you need to look. They mostly adjust line spacing and default fonts.
+  - `cp437` (default), others exist if you need to look. They mostly adjust line spacing and default fonts.
 
 `cpl * charWidth` will be the output width, which by default is 576 dots.
 

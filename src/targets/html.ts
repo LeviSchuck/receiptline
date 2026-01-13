@@ -8,7 +8,8 @@ import { generate as generateBarcode, type BarcodeSymbol } from '../barcode.ts';
 import { writeHtml, awaitHtmlNode, type HtmlNode, type HtmlStyle, type HtmlElement, type HtmlProps } from '@levischuck/tiny-html';
 import { qrCode, EcLevel } from '@levischuck/tiny-qr';
 import { toPng } from '@levischuck/tiny-qr-png';
-import { encodeBase64 } from '@levischuck/tiny-encodings';
+import { decodeBase64, encodeBase64 } from '@levischuck/tiny-encodings';
+import { readPngIHDR } from '@levischuck/tiny-png'
 
 // Helper to filter undefined values from style objects
 function cleanStyle(style: Record<string, string | undefined>): HtmlStyle {
@@ -46,7 +47,7 @@ export class HtmlTarget extends BaseTarget {
 	lineAlign: number = 0;
 	lineWidth: number = 48;
 	lineHeight: number = 1;
-	textEncoding: Encoding = 'multilingual';
+	textEncoding: Encoding = 'cp437';
 	feedMinimum: number = 24;
 	spacing: boolean = false;
 	defaultFont: string = "'Courier Prime', monospace";
@@ -151,6 +152,8 @@ export class HtmlTarget extends BaseTarget {
 			wordWrap: 'break-word',
 			overflowWrap: 'break-word',
 			overflow: 'hidden',
+			display: 'flex',
+			flexDirection: 'column',
 		};
 
 		const containerProps: HtmlProps = {
@@ -209,6 +212,7 @@ export class HtmlTarget extends BaseTarget {
 					marginLeft: `${this.lineMargin}ch`,
 					width: `${width}ch`,
 					height: '0',
+					display: 'block',
 				},
 			},
 		};
@@ -452,6 +456,7 @@ export class HtmlTarget extends BaseTarget {
 							style: {
 								flex: '1',
 								borderTop: '2px dashed black',
+								display: 'block',
 							},
 						},
 					} as HtmlElement,
@@ -488,7 +493,7 @@ export class HtmlTarget extends BaseTarget {
 		const w = wh < 2 ? wh + 1 : wh - 1;
 		const h = wh < 3 ? wh : wh - 1;
 		this.currentStyles.fontSize = `${h}em`;
-		this.currentStyles.display = 'inline-block';
+		this.currentStyles.display = 'block';
 		if (w !== h) {
 			this.currentStyles.transform = `scaleX(${w / h})`;
 			this.currentStyles.transformOrigin = 'left';
@@ -553,6 +558,7 @@ export class HtmlTarget extends BaseTarget {
 							position: 'relative',
 							width: `${this.containerWidth}px`,
 							height: `${minHeight}px`,
+							display: 'block',
 						},
 						children: this.pendingVrSvg,
 					},
@@ -701,6 +707,7 @@ export class HtmlTarget extends BaseTarget {
 						position: 'relative',
 						width: `${this.containerWidth}px`,
 						minHeight: `${minHeight}px`,
+						display: 'block',
 					},
 					children: [
 						// VR SVG positioned absolutely behind text
@@ -744,14 +751,20 @@ export class HtmlTarget extends BaseTarget {
 		// Image is provided as base64 PNG
 		const textAlign = this.lineAlign === 0 ? 'left' : this.lineAlign === 1 ? 'center' : 'right';
 
+		const imageBytes = decodeBase64(image);
+		const metadata = readPngIHDR(imageBytes);
+		const width = metadata.width;
+		const height = metadata.height;
+
 		const imgNode: HtmlElement = {
 			type: 'img',
 			props: {
 				src: `data:image/png;base64,${image}`,
 				style: cleanStyle({
-					display: 'block',
 					maxWidth: `${this.lineWidth}ch`,
 				}),
+				width: `${width}`,
+				height: `${height}`,
 			},
 		};
 
@@ -763,6 +776,7 @@ export class HtmlTarget extends BaseTarget {
 					textAlign,
 					paddingLeft: `${this.lineMargin}ch`,
 					width: `${this.lineWidth}ch`,
+					display: 'block',
 				},
 				children: imgNode,
 			},
@@ -798,7 +812,6 @@ export class HtmlTarget extends BaseTarget {
 				width: `${width}`,
 				height: `${height}`,
 				style: {
-					display: 'inline-block',
 					imageRendering: 'pixelated',
 				},
 			},
@@ -813,6 +826,7 @@ export class HtmlTarget extends BaseTarget {
 					textAlign,
 					paddingLeft: `${this.lineMargin}ch`,
 					width: `${this.lineWidth}ch`,
+					display: 'block',
 				},
 				children: [qrHtml],
 			},
@@ -874,7 +888,7 @@ export class HtmlTarget extends BaseTarget {
 					height: `${height}`,
 					viewBox: `0 0 ${width} ${height}`,
 					style: {
-						display: 'inline-block',
+						display: 'block',
 					},
 					children: svgChildren,
 				},
@@ -889,6 +903,7 @@ export class HtmlTarget extends BaseTarget {
 						textAlign,
 						paddingLeft: `${this.lineMargin}ch`,
 						width: `${this.lineWidth}ch`,
+						display: 'block',
 					},
 					children: svgNode,
 				},

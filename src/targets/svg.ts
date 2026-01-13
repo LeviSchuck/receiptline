@@ -38,7 +38,7 @@ export class SvgTarget extends BaseTarget {
 	textAttributes: Record<string, string> = {};
 	textPosition: number = 0;
 	textScale: number = 1;
-	textEncoding: Encoding = 'multilingual';
+	textEncoding: Encoding = 'cp437';
 	feedMinimum: number = 24;
 	// printer configuration
 	spacing: boolean = false;
