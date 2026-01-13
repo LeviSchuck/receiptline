@@ -46,15 +46,16 @@ export class SvgTarget extends BaseTarget {
 	fontSize: number = 12;
 
 	// start printing:
-	override open(printer: ParsedPrinter): string {
+	override async open(printer: ParsedPrinter): Promise<string> {
+		await super.open(printer);
 		this.receiptId = crypto.randomUUID();
 		this.charWidth = printer.charWidth;
-		this.svgWidth = printer.cpl * printer.charWidth;
+		this.svgWidth = this.cpl * printer.charWidth;
 		this.svgHeight = 0;
 		this.svgContent = '';
 		this.lineMargin = 0;
 		this.lineAlign = 0;
-		this.lineWidth = printer.cpl;
+		this.lineWidth = this.cpl;
 		this.lineHeight = 1;
 		this.textElement = '';
 		this.textAttributes = {};
@@ -72,7 +73,7 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// finish printing:
-	override close(): string {
+	override async close(): Promise<string> {
 		const p = { font: 'monospace', size: this.charWidth * 2, style: '', lang: '' };
 		switch (this.textEncoding) {
 			case 'cp932':
@@ -122,32 +123,32 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// set print area:
-	override area(left: number, width: number, right: number): string {
+	override async area(left: number, width: number, right: number): Promise<string> {
 		this.lineMargin = left;
 		this.lineWidth = width;
 		return '';
 	}
 
 	// set line alignment:
-	override align(align: number): string {
+	override async align(align: number): Promise<string> {
 		this.lineAlign = align;
 		return '';
 	}
 
 	// set absolute print position:
-	override absolute(position: number): string {
+	override async absolute(position: number): Promise<string> {
 		this.textPosition = position;
 		return '';
 	}
 
 	// set relative print position:
-	override relative(position: number): string {
+	override async relative(position: number): Promise<string> {
 		this.textPosition += position;
 		return '';
 	}
 
 	// print horizontal rule:
-	override hr(width: number): string {
+	override async hr(width: number): Promise<string> {
 		const w = this.charWidth;
 		const path = `<path d="M0,${w}h${w * width}" fill="none" stroke="#000" stroke-width="2"/>`;
 		this.svgContent += `<g transform="translate(${this.lineMargin * w},${this.svgHeight})">${path}</g>`;
@@ -155,7 +156,7 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// print vertical rules:
-	override vr(widths: number[], height: number): string {
+	override async vr(widths: number[], height: number): Promise<string> {
 		const w = this.charWidth, u = w / 2, v = (w + w) * height;
 		const path = `<path d="` + widths.reduce((a, width) => a + `m${w * width + w},${-v}v${v}`, `M${u},0v${v}`) + `" fill="none" stroke="#000" stroke-width="2"/>`;
 		this.svgContent += `<g transform="translate(${this.lineMargin * w},${this.svgHeight})">${path}</g>`;
@@ -163,7 +164,7 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// start rules:
-	override vrstart(widths: number[]): string {
+	override async vrstart(widths: number[]): Promise<string> {
 		const w = this.charWidth, u = w / 2;
 		const path = `<path d="` + widths.reduce((a, width) => a + `h${w * width}h${u}v${w}m0,${-w}h${u}`, `M${u},${w + w}v${-u}q0,${-u},${u},${-u}`).replace(/h\d+v\d+m0,-\d+h\d+$/, `q${u},0,${u},${u}v${u}`) + `" fill="none" stroke="#000" stroke-width="2"/>`;
 		this.svgContent += `<g transform="translate(${this.lineMargin * w},${this.svgHeight})">${path}</g>`;
@@ -171,7 +172,7 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// stop rules:
-	override vrstop(widths: number[]): string {
+	override async vrstop(widths: number[]): Promise<string> {
 		const w = this.charWidth, u = w / 2;
 		const path = `<path d="` + widths.reduce((a, width) => a + `h${w * width}h${u}v${-w}m0,${w}h${u}`, `M${u},0v${u}q0,${u},${u},${u}`).replace(/h\d+v-\d+m0,\d+h\d+$/, `q${u},0,${u},${-u}v${-u}`) + `" fill="none" stroke="#000" stroke-width="2"/>`;
 		this.svgContent += `<g transform="translate(${this.lineMargin * w},${this.svgHeight})">${path}</g>`;
@@ -179,7 +180,7 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// print vertical and horizontal rules:
-	override vrhr(widths1: number[], widths2: number[], dl: number, dr: number): string {
+	override async vrhr(widths1: number[], widths2: number[], dl: number, dr: number): Promise<string> {
 		const w = this.charWidth, u = w / 2;
 		const path1 = `<path d="` + widths1.reduce((a, width) => a + `h${w * width}h${u}v${-w}m0,${w}h${u}`, `M${u},0` + (dl > 0 ? `v${u}q0,${u},${u},${u}` : `v${w}h${u}`)).replace(/h\d+v-\d+m0,\d+h\d+$/, dr < 0 ? `q${u},0,${u},${-u}v${-u}` : `h${u}v${-w}`) + `" fill="none" stroke="#000" stroke-width="2"/>`;
 		this.svgContent += `<g transform="translate(${(this.lineMargin + Math.max(-dl, 0)) * w},${this.svgHeight})">${path1}</g>`;
@@ -189,38 +190,38 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// set line spacing and feed new line:
-	override vrlf(vr: boolean): string {
+	override async vrlf(vr: boolean): Promise<string> {
 		this.feedMinimum = Number(this.charWidth * (!vr && this.spacing ? 2.5 : 2));
-		return this.lf();
+		return await this.lf();
 	}
 
 	// cut paper:
-	override cut(): string {
+	override async cut(): Promise<string> {
 		const path = `<path d="M12,12.5l-7.5,-3a2,2,0,1,1,.5,0M12,11.5l-7.5,3a2,2,0,1,0,.5,0" fill="none" stroke="#000" stroke-width="1"/><path d="M12,12l10,-4q-1,-1,-2.5,-1l-10,4v2l10,4q1.5,0,2.5,-1z" fill="#000"/><path d="M24,12h${this.svgWidth - 24}" fill="none" stroke="#000" stroke-width="2" stroke-dasharray="2"/>`;
 		this.svgContent += `<g transform="translate(0,${this.svgHeight})">${path}</g>`;
-		return this.lf();
+		return await this.lf();
 	}
 
 	// underline text:
-	override ul(): string {
+	override async ul(): Promise<string> {
 		this.textAttributes['text-decoration'] = 'underline';
 		return '';
 	}
 
 	// emphasize text:
-	override em(): string {
+	override async em(): Promise<string> {
 		this.textAttributes.stroke = '#000';
 		return '';
 	}
 
 	// invert text:
-	override iv(): string {
+	override async iv(): Promise<string> {
 		this.textAttributes.filter = `url(#receipt-${this.receiptId})`;
 		return '';
 	}
 
 	// scale up text:
-	override wh(wh: number): string {
+	override async wh(wh: number): Promise<string> {
 		const w = wh < 2 ? wh + 1 : wh - 1;
 		const h = wh < 3 ? wh : wh - 1;
 		this.textAttributes.transform = `scale(${w},${h})`;
@@ -230,14 +231,14 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// cancel text decoration:
-	override normal(): string {
+	override async normal(): Promise<string> {
 		this.textAttributes = {};
 		this.textScale = 1;
 		return '';
 	}
 
 	// print text:
-	override text(text: string, encoding: Encoding): string {
+	override async text(text: string, encoding: Encoding): Promise<string> {
 		let p = this.textPosition;
 		const tspan = this.arrayFrom(text, encoding).reduce((a, c) => {
 			const q = this.measureText(c, encoding) * this.textScale;
@@ -252,7 +253,7 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// feed new line:
-	override lf(): string {
+	override async lf(): Promise<string> {
 		const h = this.lineHeight * this.charWidth * 2;
 		if (this.textElement.length > 0) {
 			this.svgContent += `<g transform="translate(${this.lineMargin * this.charWidth},${this.svgHeight + h})">${this.textElement}</g>`;
@@ -265,12 +266,12 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// insert commands:
-	override command(command: string): string {
+	override async command(command: string): Promise<string> {
 		return '';
 	}
 
 	// print image:
-	override image(image: string): string {
+	override async image(image: string): Promise<string> {
 		const pngBytes = decodeBase64(image);
 		const dataView = new DataView(pngBytes.buffer);
 		// Without knowing the actual PNG spec, I feel this is particularly brittle.
@@ -284,7 +285,7 @@ export class SvgTarget extends BaseTarget {
 	}
 
 	// print QR Code:
-	override qrcode(symbol: QRCode, _encoding: Encoding): string {
+	override async qrcode(symbol: QRCode, _encoding: Encoding): Promise<string> {
 		// Use QR code library to calculate the 2D matrix
 		// But don't use it for the SVG generation...
 		// It assumes an upfront width and height... we need perfect pixel size based on the cell size.
@@ -295,22 +296,25 @@ export class SvgTarget extends BaseTarget {
 		const h = qrcode.width;
 		const c = symbol.cell;
 
-		const path = toSvgString(qrcode, {
+		const result = await toSvgString(qrcode, {
 			moduleSize: c,
 			margin: symbol.quietZone ? 4 : 0,
 			output: 'path'
 		});
-		const x = Math.floor(this.lineMargin * this.charWidth);
+		// Extract the path string - handle both string and object responses
+		const path = typeof result === 'string' ? result : (result as any).path || (result as any).svg || String(result);
+		const qrWidth = h * c + (symbol.quietZone ? 8 : 0);
+		const margin = Math.floor(this.lineMargin * this.charWidth + (this.lineWidth * this.charWidth - qrWidth) * this.lineAlign / 2);
 		const y = Math.floor(this.svgHeight);
-		this.svgContent += `<g transform="translate(${x},${y})" shape-rendering="crispEdges">
+		this.svgContent += `<g transform="translate(${margin},${y})" shape-rendering="crispEdges">
 			<path d="${path}" stroke="transparent" fill="black" shape-rendering="crispEdges" />
 		</g>`;
-		this.svgHeight += h * c + (symbol.quietZone ? 8 : 0);
+		this.svgHeight += qrWidth;
 		return '';
 	}
 
 	// print barcode:
-	override barcode(symbol: Barcode, encoding: Encoding): string {
+	override async barcode(symbol: Barcode, encoding: Encoding): Promise<string> {
 		const bar = generateBarcode(symbol as BarcodeSymbol);
 		const h = bar.height;
 		if (h !== undefined && 'length' in bar && bar.length !== undefined && bar.widths) {

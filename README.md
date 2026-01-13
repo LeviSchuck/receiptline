@@ -1,11 +1,11 @@
-# SVG-only ReceiptLine
+# ReceiptLine
 
-Markdown for receipts. Printable digital receipts. &#x1f9fe;  
-Generate receipt printer commands and images.
+Markdown for receipts. Printable digital receipts. &#x1f9fe;
+Generate receipt printer commands, SVG images, and HTML documents.
 
-ReceiptLine is the receipt description language that expresses the output image of small roll paper.  
-It supports printing paper receipts using a receipt printer and displaying electronic receipts on a POS system or smartphone.  
-It can be described simply with receipt markdown text data that does not depend on the paper width.  
+ReceiptLine is the receipt description language that expresses the output image of small roll paper.
+It supports printing paper receipts using a receipt printer and displaying electronic receipts on a POS system or smartphone.
+It can be described simply with receipt markdown text data that does not depend on the paper width.
 
 # Installation
 
@@ -15,27 +15,31 @@ $ npm install @levischuck/receiptline
 
 # Usage
 
-`receiptline.transform()` method transforms ReceiptLine document to printer commands or SVG images.  
+`receiptline.transform()` method transforms ReceiptLine document to printer commands, SVG images, or HTML documents.
 
 ```javascript
-import { transform, SvgTarget } from "@levischuck/receiptline";
+import { transform, SvgTarget, HtmlTarget } from "@levischuck/receiptline";
 
-const svgTarget = new SvgTarget();
-svgTarget.setDefaultFont("'Atkinson Hyperlegible Mono'");
 const body = `Example Receipt
 (Merchant Copy)
 ---
 
-| Product | Qty| Price
---
-|Pad Thai | 1| 14.99
-|Spring Roll | 1| 4.99
-| | | 
-| | Subtotal| 19.98
-| | Tax (6%)| 1.20
-| | Convenience Fee| 0.99
-| | Total| 22.17
+{w: * 4 8}
+{b:line}
+||Product | Qty| Price
+|--
+||Pad Thai | 1| 14.99
+||Spring Roll | 1| 4.99
+|--
+{w:* 8}
+|| Subtotal| 19.98
+|| Tax (6%)| 1.20
+|| Convenience Fee| 0.99
+|| Total| 22.17
+---
 
+{b:space}
+{w:auto}
 Please Sign:
 
 
@@ -46,18 +50,32 @@ Please Sign:
 
 Please Take our Survey`;
 
-const {svg, width, height} = transform(body, {
+// SVG Target
+const svgTarget = new SvgTarget();
+svgTarget.setDefaultFont("'Atkinson Hyperlegible Mono'");
+const {content: svg, width, height} = await transform(body, {
   cpl: charactersPerLine,
   charWidth: charWidth,
   target: svgTarget,
 });
 
-// Do something interesting with the svg afterwards
+// HTML Target
+const htmlTarget = new HtmlTarget();
+htmlTarget.setDefaultFont("'Google Sans Code', monospace");
+htmlTarget.setActualFontCharacterWidth(13.2); // Actual measured width of your font
+htmlTarget.setCharHeight(24); // Character height in pixels
+const {content: html, width: htmlWidth, height: htmlHeight} = await transform(body, {
+  cpl: charactersPerLine,
+  charWidth: charWidth,
+  target: htmlTarget,
+});
+c
+// Do something interesting with the SVG or HTML afterwards
 ```
 
 ## Method
 
-`transform(doc[, options])`  
+`transform(doc[, options])`
 
 ### Parameters
 
@@ -68,7 +86,9 @@ const {svg, width, height} = transform(body, {
 
 ### Return value
 
-- SVG Image with expected width and height
+- `content`: SVG Image (for SvgTarget) or HTML string (for HtmlTarget)
+- `width`: Width of the generated content in pixels
+- `height`: Height of the generated content in pixels
 
 ## Printer configuration
 
@@ -83,22 +103,39 @@ const {svg, width, height} = transform(body, {
   - print margin (left) (range: `0` - `24`, default: `0`)
 - `marginRight` (for printer)
   - print margin (right) (range: `0` - `24`, default: `0`)
-- `target` What implementation to use (currently only SVG, instantiate your own to set additional configuration like font)
+- `target` What implementation to use (SvgTarget for SVG output, HtmlTarget for HTML output, instantiate your own to set additional configuration like font)
 - `encoding`
   - `multilingual` (default), others exist if you need to look. They mostly adjust line spacing and default fonts.
 
 `cpl * charWidth` will be the output width, which by default is 576 dots.
 
+## HTML Target Configuration
+
+The HTML target provides additional configuration options to account for differences with web fonts and the defaults this library expects for a thermal printer.
+
+- `setDefaultFont(font: string)` - Sets the CSS font-family for the receipt (default: "'Courier Prime', monospace")
+- `setActualFontCharacterWidth(width: number | undefined)` - Sets the actual measured character width of your font in pixels. It'll keep the text from going off the side when correctly set.
+- `setCharHeight(height: number | undefined)` - Explicitly sets the character height in pixels. If not set, defaults to `charWidth * 2` (usually 12 * 2)
+
+When using the HTML target, you may need to measure your font's actual character width for optimal layout. This is especially important when using web fonts that don't fit the 12 dot wide, 24 dot tall convention.
+
+```javascript
+const htmlTarget = new HtmlTarget();
+htmlTarget.setDefaultFont("'Google Sans Code', monospace");
+htmlTarget.setActualFontCharacterWidth(13.2);
+htmlTarget.setCharHeight(24.7);
+```
+
 # Examples
 ### example/data/\*
 
-The documents (receipt markdown text) are the same as the examples in the OFSC ReceiptLine Specification.  
+The documents (receipt markdown text) are the same as the examples in the OFSC ReceiptLine Specification.
 
 # Grammar
 
 ## Structure
 
-The receipt is made of a table, which separates each column with a pipe `|`.  
+The receipt is made of a table, which separates each column with a pipe `|`.
 
 |Line|Content|Description|
 |---|---|---|
@@ -108,8 +145,8 @@ The receipt is made of a table, which separates each column with a pipe `|`.
 
 ## Alignment
 
-The column is attracted to the pipe `|` like a magnet.  
-<code>&#x2423;</code> means one or more whitespaces.  
+The column is attracted to the pipe `|` like a magnet.
+<code>&#x2423;</code> means one or more whitespaces.
 
 |Column|Description|
 |---|---|
@@ -119,7 +156,7 @@ The column is attracted to the pipe `|` like a magnet.
 
 ## Text
 
-The text is valid for any column.  
+The text is valid for any column.
 
 ```
 Asparagus | 0.99
@@ -129,13 +166,13 @@ Carrot | 2.99
 ^TOTAL | ^5.97
 ```
 
-Characters are printed in a monospace font (12 x 24 px).  
-Wide characters are twice as wide as Latin characters (24 x 24 px).  
-Control characters are ignored.  
+Characters are printed in a monospace font (12 x 24 px).
+Wide characters are twice as wide as Latin characters (24 x 24 px).
+Control characters are ignored.
 
 ## Special characters in text
 
-Special characters are assigned to characters that are rarely used in the receipt.  
+Special characters are assigned to characters that are rarely used in the receipt.
 
 |Special character|Description|
 |---|---|
@@ -159,7 +196,7 @@ Special characters are assigned to characters that are rarely used in the receip
 
 ## Escape sequences in text
 
-Escape special characters.  
+Escape special characters.
 
 |Escape sequence|Description|
 |---|---|
@@ -180,7 +217,7 @@ Escape special characters.
 
 ## Properties
 
-The property is valid for lines with a single column.  
+The property is valid for lines with a single column.
 
 ```
 { width: * 10; comment: the column width is specified in characters }
@@ -200,7 +237,7 @@ The property is valid for lines with a single column.
 
 ## Barcode options
 
-Barcode options are separated by commas or one or more whitespaces.  
+Barcode options are separated by commas or one or more whitespaces.
 
 |Barcode option|Description|
 |---|---|
@@ -218,7 +255,7 @@ Barcode options are separated by commas or one or more whitespaces.
 
 ## 2D code options
 
-2D code options are separated by commas or one or more whitespaces.  
+2D code options are separated by commas or one or more whitespaces.
 
 |2D code option|Description|
 |---|---|
@@ -228,7 +265,7 @@ Barcode options are separated by commas or one or more whitespaces.
 
 ## Special characters in property values
 
-Special characters in property values are different from special characters in text.  
+Special characters in property values are different from special characters in text.
 
 |Special character|Description|
 |---|---|
@@ -241,7 +278,7 @@ Special characters in property values are different from special characters in t
 
 ## Escape sequences in property values
 
-Escape special characters.  
+Escape special characters.
 
 |Escape sequence|Description|
 |---|---|
@@ -271,8 +308,8 @@ http://www.denso-wave.com/qrcode/faqpatent-e.html
 
 # Author
 
-Open Foodservice System Consortium  
-http://www.ofsc.or.jp/  
+Open Foodservice System Consortium
+http://www.ofsc.or.jp/
 
 Levi Schuck
 https://levischuck.com/

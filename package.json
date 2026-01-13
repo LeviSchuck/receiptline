@@ -16,8 +16,10 @@
   },
   "dependencies": {
     "@levischuck/tiny-encodings": "^0.2.11",
-    "@levischuck/tiny-qr": "^0.0.5",
-    "@levischuck/tiny-qr-svg": "^0.0.5"
+    "@levischuck/tiny-html": "^0.1.1",
+    "@levischuck/tiny-qr": "^0.0.8",
+    "@levischuck/tiny-qr-png": "^0.0.10",
+    "@levischuck/tiny-qr-svg": "^0.0.8"
   },
   "keywords": [
     "kiosk",
@@ -39,7 +41,7 @@
   },
   "scripts": {
     "build": "vite build",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit && echo 'Type checking examples/react-receiptline' && cd examples/react-receiptline && bun type-check"
   },
   "exports": {
     ".": {

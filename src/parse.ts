@@ -1,7 +1,9 @@
 import targets from './targets/index.ts';
 import { BaseTarget } from './targets/base.ts';
 import { SvgTarget } from './targets/svg.ts';
-import type { Barcode, Encoding, ParsedPrinter, Printer, QRCode } from './types.ts';
+import { HtmlTarget } from './targets/html.ts';
+import { AuditTarget } from './targets/audit.ts';
+import type { Barcode, Encoding, ParsedPrinter, Printer, QRCode, BaseTargetInterface } from './types.ts';
 
 // QR Code is a registered trademark of DENSO WAVE INCORPORATED.
 
@@ -76,13 +78,17 @@ export function parseOption(printer?: Partial<Printer>): ParsedPrinter {
 	const targetKey = typeof p.target === 'string' ? p.target : undefined;
 	const targetObj = typeof p.target === 'object' && p.target !== null ? p.target : undefined;
 	const untypedTarget = targetObj || (targetKey && targetKey in targets ? targets[targetKey as keyof typeof targets] : targets.svg);
-	// Create a new instance to avoid sharing state
-	let target: BaseTarget;
+	// Use the target instance directly (caller can configure it or we'll use the singleton)
+	let target: BaseTargetInterface;
 
-	if (untypedTarget instanceof SvgTarget) {
-		target = untypedTarget
+	if (untypedTarget instanceof HtmlTarget) {
+		target = untypedTarget;
+	} else if (untypedTarget instanceof SvgTarget) {
+		target = untypedTarget;
+	} else if (untypedTarget instanceof AuditTarget) {
+		target = untypedTarget;
 	} else if (untypedTarget instanceof BaseTarget) {
-		target = untypedTarget
+		target = untypedTarget;
 	} else {
 		target = new SvgTarget();
 	}
@@ -431,7 +437,7 @@ function wrapText(column: ParsedColumn & { text: string[] }, printer: ParsedPrin
  * @param state state variables
  * @returns printer command fragment or SVG image fragment
  */
-export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: ParseState): string {
+export async function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: ParseState): Promise<string> {
 	const result: string[] = [];
 	// text or property
 	const text: boolean = line.every(el => 'text' in el);
@@ -441,7 +447,7 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 	let columns: ParsedColumn[] = line.filter(el => el.width !== 0);
 	// remove overflowing columns
 	if (text) {
-		columns = columns.slice(0, Math.floor(column.border < 0 ? (printer.cpl - 1) / 2 : (printer.cpl + column.border) / (column.border + 1)));
+		columns = columns.slice(0, Math.floor(column.border < 0 ? (printer.target.cpl - 1) / 2 : (printer.target.cpl + column.border) / (column.border + 1)));
 	}
 	// fixed columns
 	const f: ParsedColumn[] = columns.filter(el => el.width > 0);
@@ -450,7 +456,7 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 	// reserved width
 	let u: number = f.reduce((a, el) => a + el.width, 0);
 	// free width
-	let v: number = printer.cpl - u;
+	let v: number = printer.target.cpl - u;
 	// subtract border width from free width
 	if (text && columns.length > 0) {
 		v -= column.border < 0 ? columns.length + 1 : (columns.length - 1) * column.border;
@@ -470,7 +476,7 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 	}
 	// print area
 	const left: number = Math.floor(v * column.alignment / 2);
-	const width: number = printer.cpl - v;
+	const width: number = printer.target.cpl - v;
 	const right: number = v - left;
 	// process text
 	if (text) {
@@ -482,11 +488,13 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 		switch (state.line) {
 			case 'ready':
 				// append commands to start rules
-				result.push(printer.target.normal() +
-					printer.target.area(left, width, right) +
-					printer.target.align(0) +
-					printer.target.vrstart(widths) +
-					printer.target.vrlf(true));
+				result.push(
+					await printer.target.normal() +
+					await printer.target.area(left, width, right) +
+					await printer.target.align(0) +
+					await printer.target.vrstart(widths) +
+					await printer.target.vrlf(true)
+				);
 				state.line = 'running';
 				break;
 			case 'horizontal':
@@ -495,11 +503,13 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 				const w: number = width - state.rules.width;
 				const l: number = Math.min(left, state.rules.left);
 				const r: number = Math.min(right, state.rules.right);
-				result.push(printer.target.normal() +
-					printer.target.area(l, printer.cpl - l - r, r) +
-					printer.target.align(0) +
-					printer.target.vrhr(state.rules.widths, widths, m, m + w) +
-					printer.target.lf());
+				result.push(
+					await printer.target.normal() +
+					await printer.target.area(l, printer.target.cpl - l - r, r) +
+					await printer.target.align(0) +
+					await printer.target.vrhr(state.rules.widths, widths, m, m + w) +
+					await printer.target.lf()
+				);
 				state.line = 'running';
 				break;
 			default:
@@ -512,9 +522,10 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 		// sort text
 		for (let j = 0; j < row; j++) {
 			// append commands to set print area and line alignment
-			let res: string = printer.target.normal() +
-				printer.target.area(left, width, right) +
-				printer.target.align(0);
+			let res: string =
+				await printer.target.normal() +
+				await printer.target.area(left, width, right) +
+				await printer.target.align(0);
 			// print position
 			let p: number = 0;
 			// process vertical rules
@@ -522,18 +533,21 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 				// maximum height
 				const height: number = cols.reduce((a, col) => j < col.length ? Math.max(a, col[j]?.height ?? 1) : a, 1);
 				// append commands to print vertical rules
-				res += printer.target.normal() +
-					printer.target.absolute(p++) +
-					printer.target.vr(widths, height);
+				res +=
+					await printer.target.normal() +
+					await printer.target.absolute(p++) +
+					await printer.target.vr(widths, height);
 			}
 			// process each column
-			cols.forEach((col: WrappedTextLine[], i: number) => {
+			for (let i = 0; i < cols.length; i++) {
+				const col = cols[i];
+				if (!col) continue;
 				// append commands to set print position of first column
-				res += printer.target.absolute(p);
+				res += await printer.target.absolute(p);
 				// if wrapped text is not empty
 				if (j < col.length) {
 					// append commands to align text
-					res += printer.target.relative(col[j]?.margin ?? 0);
+					res += await printer.target.relative(col[j]?.margin ?? 0);
 					// process text
 					const data: (string | number)[] = col[j]?.data ?? [];
 					for (let k = 0; k < data.length; k += 2) {
@@ -542,32 +556,32 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 						const em: number = Number(String(data[k])[1]);
 						const iv: number = Number(String(data[k])[2]);
 						const wh: number = Number(String(data[k])[3]);
-						res += printer.target.normal();
+						res += await printer.target.normal();
 						if (ul) {
-							res += printer.target.ul();
+							res += await printer.target.ul();
 						}
 						if (em) {
-							res += printer.target.em();
+							res += await printer.target.em();
 						}
 						if (iv) {
-							res += printer.target.iv();
+							res += await printer.target.iv();
 						}
 						if (wh) {
-							res += printer.target.wh(wh);
+							res += await printer.target.wh(wh);
 						}
 						// append commands to print text
-						res += printer.target.text(String(data[k + 1]), printer.encoding);
+						res += await printer.target.text(String(data[k + 1]), printer.encoding);
 					}
 				}
 				// if wrapped text is empty
 				else {
-					res += printer.target.normal() + printer.target.text(' ', printer.encoding);
+					res += await printer.target.normal() + await printer.target.text(' ', printer.encoding);
 				}
 				// append commands to set print position of next column
 				p += (columns[i]?.width ?? 0) + Math.abs(column.border);
-			});
+			}
 			// append commands to feed new line
-			res += printer.target.lf();
+			res += await printer.target.lf();
 			result.push(res);
 		}
 	}
@@ -579,19 +593,21 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 				case 'running':
 				case 'horizontal':
 					// append commands to stop rules
-					result.push(printer.target.normal() +
-						printer.target.area(state.rules.left, state.rules.width, state.rules.right) +
-						printer.target.align(0) +
-						printer.target.vrstop(state.rules.widths) +
-						printer.target.vrlf(false));
+					result.push(
+						await printer.target.normal() +
+						await printer.target.area(state.rules.left, state.rules.width, state.rules.right) +
+						await printer.target.align(0) +
+						await printer.target.vrstop(state.rules.widths) +
+						await printer.target.vrlf(false)
+					);
 					// append commands to cut paper
-					result.push(printer.target.cut());
+					result.push(await printer.target.cut());
 					// set state to start rules
 					state.line = 'ready';
 					break;
 				default:
 					// append commands to cut paper
-					result.push(printer.target.cut());
+					result.push(await printer.target.cut());
 					break;
 			}
 		}
@@ -600,11 +616,13 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 			switch (state.line) {
 				case 'waiting':
 					// append commands to print horizontal rule
-					result.push(printer.target.normal() +
-						printer.target.area(left, width, right) +
-						printer.target.align(0) +
-						printer.target.hr(width) +
-						printer.target.lf());
+					result.push(
+						await printer.target.normal() +
+						await printer.target.area(left, width, right) +
+						await printer.target.align(0) +
+						await printer.target.hr(width) +
+						await printer.target.lf()
+					);
 					break;
 				case 'running':
 					// set state to print horizontal rule
@@ -631,11 +649,13 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 				case 'running':
 				case 'horizontal':
 					// append commands to stop rules
-					result.push(printer.target.normal() +
-						printer.target.area(state.rules.left, state.rules.width, state.rules.right) +
-						printer.target.align(0) +
-						printer.target.vrstop(state.rules.widths) +
-						printer.target.vrlf(false));
+					result.push(
+						await printer.target.normal() +
+						await printer.target.area(state.rules.left, state.rules.width, state.rules.right) +
+						await printer.target.align(0) +
+						await printer.target.vrstop(state.rules.widths) +
+						await printer.target.vrlf(false)
+					);
 					state.line = 'waiting';
 					break;
 				default:
@@ -646,37 +666,45 @@ export function createLine(line: ParsedColumn[], printer: ParsedPrinter, state: 
 	// process image
 	if ('image' in column && column.image) {
 		// append commands to print image
-		result.push(printer.target.normal() +
-			printer.target.area(left, width, right) +
-			printer.target.align(column.align) +
-			printer.target.image(column.image));
+		result.push(
+			await printer.target.normal() +
+			await printer.target.area(left, width, right) +
+			await printer.target.align(column.align) +
+			await printer.target.image(column.image)
+		);
 	}
 	// process barcode or 2D code
 	if ('code' in column && column.code) {
 		// process 2D code
 		if (column.code.type === 'qrcode') {
 			// append commands to print 2D code
-			result.push(printer.target.normal() +
-				printer.target.area(left, width, right) +
-				printer.target.align(column.align) +
-				printer.target.qrcode(column.code, printer.encoding));
+			result.push(
+				await printer.target.normal() +
+				await printer.target.area(left, width, right) +
+				await printer.target.align(column.align) +
+				await printer.target.qrcode(column.code, printer.encoding)
+			);
 		}
 		// process barcode
 		else {
 			// append commands to print barcode
-			result.push(printer.target.normal() +
-				printer.target.area(left, width, right) +
-				printer.target.align(column.align) +
-				printer.target.barcode(column.code, printer.encoding));
+			result.push(
+				await printer.target.normal() +
+				await printer.target.area(left, width, right) +
+				await printer.target.align(column.align) +
+				await printer.target.barcode(column.code, printer.encoding)
+			);
 		}
 	}
 	// process command
 	if ('command' in column && column.command) {
 		// append commands to insert commands
-		result.push(printer.target.normal() +
-			printer.target.area(left, width, right) +
-			printer.target.align(column.align) +
-			printer.target.command(column.command));
+		result.push(
+			await printer.target.normal() +
+			await printer.target.area(left, width, right) +
+			await printer.target.align(column.align) +
+			await printer.target.command(column.command)
+		);
 	}
 	return result.join('');
 }

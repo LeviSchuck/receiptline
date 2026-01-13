@@ -20,6 +20,72 @@ import type { Encoding, ParsedPrinter, QRCode, Barcode, BaseTargetInterface } fr
  * Base target class for ReceiptLine commands.
  */
 export class BaseTarget implements BaseTargetInterface {
+	private locked: boolean = false;
+	private lockPromise: Promise<void> | null = null;
+	private lockResolve: (() => void) | null = null;
+	protected _cpl: number = 48;
+
+	/**
+	 * Get characters per line.
+	 * @returns {number} characters per line
+	 */
+	get cpl(): number {
+		return this._cpl;
+	}
+
+	/**
+	 * Lock the target for exclusive use.
+	 * @param {number} [timeout] timeout in milliseconds (default: 5000)
+	 * @returns {Promise<void>} resolves when lock is acquired
+	 * @throws {Error} if timeout occurs
+	 */
+	async lock(timeout: number = 5000): Promise<void> {
+		if (!this.locked) {
+			this.locked = true;
+			this.lockPromise = new Promise<void>((resolve) => {
+				this.lockResolve = resolve;
+			});
+			return;
+		}
+
+		// Wait for unlock with timeout
+		const abortController = new AbortController();
+		const timeoutId = setTimeout(() => {
+			abortController.abort();
+		}, timeout);
+
+		try {
+			await Promise.race([
+				this.lockPromise!,
+				new Promise<void>((_, reject) => {
+					abortController.signal.addEventListener('abort', () => {
+						reject(new Error(`Lock timeout after ${timeout}ms`));
+					});
+				})
+			]);
+		} finally {
+			clearTimeout(timeoutId);
+		}
+
+		// Now acquire the lock
+		this.locked = true;
+		this.lockPromise = new Promise<void>((resolve) => {
+			this.lockResolve = resolve;
+		});
+	}
+
+	/**
+	 * Unlock the target.
+	 */
+	unlock(): void {
+		if (this.locked && this.lockResolve) {
+			this.locked = false;
+			this.lockResolve();
+			this.lockResolve = null;
+			this.lockPromise = null;
+		}
+	}
+
 	/**
 	 * Measure text width.
 	 * @param {string} text string to measure
@@ -197,17 +263,18 @@ export class BaseTarget implements BaseTargetInterface {
 	/**
 	 * Start printing.
 	 * @param {object} printer printer configuration
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	open(printer: ParsedPrinter): string {
+	async open(printer: ParsedPrinter): Promise<string> {
+		this._cpl = printer.cpl;
 		return '';
 	}
 
 	/**
 	 * Finish printing.
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	close(): string {
+	async close(): Promise<string> {
 		return '';
 	}
 
@@ -216,45 +283,45 @@ export class BaseTarget implements BaseTargetInterface {
 	 * @param {number} left left margin (unit: characters)
 	 * @param {number} width print area (unit: characters)
 	 * @param {number} right right margin (unit: characters)
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	area(left: number, width: number, right: number): string {
+	async area(left: number, width: number, right: number): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Set line alignment.
 	 * @param {number} align line alignment (0: left, 1: center, 2: right)
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	align(align: number): string {
+	async align(align: number): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Set absolute print position.
 	 * @param {number} position absolute position (unit: characters)
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	absolute(position: number): string {
+	async absolute(position: number): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Set relative print position.
 	 * @param {number} position relative position (unit: characters)
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	relative(position: number): string {
+	async relative(position: number): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Print horizontal rule.
 	 * @param {number} width line width (unit: characters)
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	hr(width: number): string {
+	async hr(width: number): Promise<string> {
 		return '';
 	}
 
@@ -262,27 +329,27 @@ export class BaseTarget implements BaseTargetInterface {
 	 * Print vertical rules.
 	 * @param {number[]} widths vertical line spacing
 	 * @param {number} height text height (1-6)
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	vr(widths: number[], height: number): string {
+	async vr(widths: number[], height: number): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Start rules.
 	 * @param {number[]} widths vertical line spacing
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	vrstart(widths: number[]): string {
+	async vrstart(widths: number[]): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Stop rules.
 	 * @param {number[]} widths vertical line spacing
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	vrstop(widths: number[]): string {
+	async vrstop(widths: number[]): Promise<string> {
 		return '';
 	}
 
@@ -292,67 +359,67 @@ export class BaseTarget implements BaseTargetInterface {
 	 * @param {number[]} widths2 vertical line spacing (start)
 	 * @param {number} dl difference in left position
 	 * @param {number} dr difference in right position
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	vrhr(widths1: number[], widths2: number[], dl: number, dr: number): string {
+	async vrhr(widths1: number[], widths2: number[], dl: number, dr: number): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Set line spacing and feed new line.
 	 * @param {boolean} vr whether vertical ruled lines are printed
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	vrlf(vr: boolean): string {
+	async vrlf(vr: boolean): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Cut paper.
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	cut(): string {
+	async cut(): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Underline text.
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	ul(): string {
+	async ul(): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Emphasize text.
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	em(): string {
+	async em(): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Invert text.
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	iv(): string {
+	async iv(): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Scale up text.
 	 * @param {number} wh number of special character '^' (1-7)
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	wh(wh: number): string {
+	async wh(wh: number): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Cancel text decoration.
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	normal(): string {
+	async normal(): Promise<string> {
 		return '';
 	}
 
@@ -360,35 +427,35 @@ export class BaseTarget implements BaseTargetInterface {
 	 * Print text.
 	 * @param {string} text string to print
 	 * @param {string} encoding codepage
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	text(text: string, encoding: Encoding): string {
+	async text(text: string, encoding: Encoding): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Feed new line.
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	lf(): string {
+	async lf(): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Insert commands.
 	 * @param {string} command commands to insert
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	command(command: string): string {
+	async command(command: string): Promise<string> {
 		return '';
 	}
 
 	/**
 	 * Print image.
 	 * @param {string} image image data (base64 png format)
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	image(image: string): string {
+	async image(image: string): Promise<string> {
 		return '';
 	}
 
@@ -396,9 +463,9 @@ export class BaseTarget implements BaseTargetInterface {
 	 * Print QR Code.
 	 * @param {object} symbol QR Code information (data, type, cell, level)
 	 * @param {string} encoding codepage
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	qrcode(symbol: QRCode, encoding: Encoding): string {
+	async qrcode(symbol: QRCode, encoding: Encoding): Promise<string> {
 		return '';
 	}
 
@@ -406,9 +473,9 @@ export class BaseTarget implements BaseTargetInterface {
 	 * Print barcode.
 	 * @param {object} symbol barcode information (data, type, width, height, hri)
 	 * @param {string} encoding codepage
-	 * @returns {string} commands
+	 * @returns {Promise<string>} commands
 	 */
-	barcode(symbol: Barcode, encoding: Encoding): string {
+	async barcode(symbol: Barcode, encoding: Encoding): Promise<string> {
 		return '';
 	}
 
