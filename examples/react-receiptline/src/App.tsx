@@ -43,6 +43,7 @@ function App() {
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(0);
   const [error, setError] = useState('');
+	const [widthSpacingUnit, setWidthSpacingUnit] = useState<'px' | '%' | 'ch'>('px');
 
   // Instantiate target based on targetType
   const target = useMemo<BaseTarget>(() => {
@@ -54,13 +55,14 @@ function App() {
         htmlTarget.setDefaultFont("'Google Sans Code', monospace");
         htmlTarget.setActualFontCharacterWidth(actualFontWidth);
         htmlTarget.setCharHeight(charHeight);
+				htmlTarget.setWidthSpacingUnit(widthSpacingUnit);
         return htmlTarget;
       case 'audit':
         return new AuditTarget();
       default:
         return new SvgTarget();
     }
-  }, [targetType, actualFontWidth, charHeight]);
+  }, [targetType, actualFontWidth, charHeight, widthSpacingUnit]);
 
   useEffect(() => {
     const generateReceipt = async () => {
@@ -142,30 +144,57 @@ function App() {
                 onChange={(e) => setCharWidth(parseFloat(e.target.value) || 12)}
               />
             </label>
-            <label className="config-label">
-              <span>Character height:</span>
-              <input
-                type="number"
-                min="1"
-                max="100"
-                step="0.1"
-                value={charHeight}
-                onChange={(e) => setCharHeight(parseFloat(e.target.value) || 24)}
-                disabled={targetType !== 'html'}
-              />
-            </label>
-            <label className="config-label">
-              <span>Actual font width:</span>
-              <input
-                type="number"
-                min="0.1"
-                max="50"
-                step="0.1"
-                value={actualFontWidth}
-                onChange={(e) => setActualFontWidth(parseFloat(e.target.value) || 13.2)}
-                disabled={targetType !== 'html'}
-              />
-            </label>
+						{targetType === 'html' && <>
+							<label className="config-label">
+								<span>Width spacing unit:</span>
+								<input
+									type="radio"
+									name="widthSpacingUnit"
+									value="px"
+									checked={widthSpacingUnit === 'px'}
+									onChange={(e) => setWidthSpacingUnit(e.target.value as 'px' | '%' | 'ch')}
+								/>
+								<span>px</span>
+								<input
+									type="radio"
+									name="widthSpacingUnit"
+									value="%"
+									checked={widthSpacingUnit === '%'}
+									onChange={(e) => setWidthSpacingUnit(e.target.value as 'px' | '%' | 'ch')}
+								/>
+								<span>%</span>
+								<input
+									type="radio"
+									name="widthSpacingUnit"
+									value="ch"
+									checked={widthSpacingUnit === 'ch'}
+									onChange={(e) => setWidthSpacingUnit(e.target.value as 'px' | '%' | 'ch')}
+								/>
+								<span>ch</span>
+							</label>
+							<label className="config-label">
+								<span>Character height:</span>
+								<input
+									type="number"
+									min="1"
+									max="100"
+									step="0.1"
+									value={charHeight}
+									onChange={(e) => setCharHeight(parseFloat(e.target.value) || 24)}
+								/>
+							</label>
+							<label className="config-label">
+								<span>Actual font width:</span>
+								<input
+									type="number"
+									min="0.1"
+									max="50"
+									step="0.1"
+									value={actualFontWidth}
+									onChange={(e) => setActualFontWidth(parseFloat(e.target.value) || 13.2)}
+								/>
+							</label>
+						</>}
           </div>
         </div>
       </header>

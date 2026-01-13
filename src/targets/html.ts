@@ -53,6 +53,7 @@ export class HtmlTarget extends BaseTarget {
 	defaultFont: string = "'Courier Prime', monospace";
 	actualFontCharacterWidth: number | undefined = undefined;
 	private explicitCharHeight: number | undefined = undefined;
+	widthSpacingUnit: 'px' | '%' | 'ch' = 'px';
 
 	// DOM building state
 	contentNodes: HtmlNode[] = [];
@@ -104,6 +105,31 @@ export class HtmlTarget extends BaseTarget {
 
 	setCharHeight(height: number | undefined): void {
 		this.explicitCharHeight = height;
+	}
+
+	setWidthSpacingUnit(unit: 'px' | '%' | 'ch'): void {
+		this.widthSpacingUnit = unit;
+	}
+
+	/**
+	 * Converts a character width to the appropriate CSS unit based on widthSpacingUnit.
+	 * @param chars - Width in characters
+	 * @returns CSS value string (e.g., "12px", "50%", "12ch")
+	 */
+	private toWidthUnit(chars: number): string {
+		const fontWidth = this.actualFontCharacterWidth ?? this.charWidth;
+
+		switch (this.widthSpacingUnit) {
+			case 'px':
+				return `${Math.floor(chars * fontWidth)}px`;
+			case '%':
+				const pxValue = chars * fontWidth;
+				const percent = (pxValue / this.containerWidth) * 100;
+				return `${percent}%`;
+			case 'ch':
+			default:
+				return `${chars}ch`;
+		}
 	}
 
 	// finish printing (async to support Promise nodes like QR code PNGs):
@@ -209,8 +235,8 @@ export class HtmlTarget extends BaseTarget {
 			props: {
 				style: {
 					borderTop: '2px solid black',
-					marginLeft: `${this.lineMargin}ch`,
-					width: `${width}ch`,
+					marginLeft: this.toWidthUnit(this.lineMargin),
+					width: this.toWidthUnit(width),
 					height: '0',
 					display: 'flex',
 				},
@@ -240,14 +266,14 @@ export class HtmlTarget extends BaseTarget {
 		const svgNode: HtmlElement = {
 			type: 'svg',
 			props: {
-				width: `${totalWidthChars}ch`,
+				width: this.toWidthUnit(totalWidthChars),
 				height: `${v}`,
 				viewBox: `0 0 ${viewBoxWidth} ${v}`,
 				preserveAspectRatio: 'none',
 				style: {
 					position: 'absolute',
 					top: '0',
-					left: `${this.lineMargin}ch`,
+					left: this.toWidthUnit(this.lineMargin),
 				},
 				children: {
 					type: 'path',
@@ -279,13 +305,13 @@ export class HtmlTarget extends BaseTarget {
 		const svgNode: HtmlElement = {
 			type: 'svg',
 			props: {
-				width: `${totalWidthChars}ch`,
+				width: this.toWidthUnit(totalWidthChars),
 				height: `${viewBoxHeight}`,
 				viewBox: `0 0 ${viewBoxWidth} ${viewBoxHeight}`,
 				preserveAspectRatio: 'none',
 				style: {
 					display: 'flex',
-					marginLeft: `${this.lineMargin}ch`,
+					marginLeft: this.toWidthUnit(this.lineMargin),
 				},
 				children: {
 					type: 'path',
@@ -331,12 +357,12 @@ export class HtmlTarget extends BaseTarget {
 		const svgNode: HtmlElement = {
 			type: 'svg',
 			props: {
-				width: `${totalWidthChars}ch`,
+				width: this.toWidthUnit(totalWidthChars),
 				height: `${viewBoxHeight}`,
 				viewBox: `0 0 ${viewBoxWidth} ${viewBoxHeight}`,
 				preserveAspectRatio: 'none',
 				style: {
-					marginLeft: `${this.lineMargin}ch`,
+					marginLeft: this.toWidthUnit(this.lineMargin),
 				},
 				children: {
 					type: 'path',
@@ -399,12 +425,12 @@ export class HtmlTarget extends BaseTarget {
 		const svgNode: HtmlElement = {
 			type: 'svg',
 			props: {
-				width: `${maxWidthChars}ch`,
+				width: this.toWidthUnit(maxWidthChars),
 				height: `${viewBoxHeight}`,
 				viewBox: `0 0 ${viewBoxWidth} ${viewBoxHeight}`,
 				preserveAspectRatio: 'none',
 				style: {
-					marginLeft: `${this.lineMargin + Math.max(-dl, 0)}ch`,
+					marginLeft: this.toWidthUnit(this.lineMargin + Math.max(-dl, 0)),
 				},
 				children: [
 					{ type: 'path', props: { d: path1, fill: 'none', stroke: 'black', 'stroke-width': '2', 'vector-effect': 'non-scaling-stroke' } } as HtmlElement,
@@ -581,16 +607,35 @@ export class HtmlTarget extends BaseTarget {
 				return Math.floor(widthChars);
 			};
 
-			// Helper to calculate quantized width in ch units
-			const quantizedCh = (widthChars: number): string => {
+			// Helper to calculate quantized width in the configured unit
+			const quantizedWidth = (widthChars: number): string => {
 				const quantized = quantizeWidth(widthChars);
-				return `${quantized}ch`;
+				return this.toWidthUnit(quantized);
 			};
 
-			// Helper to parse ch value from flexBasis string
-			const parseCh = (basis: string): number => {
-				const match = basis.match(/^(\d+(?:\.\d+)?)ch$/);
-				return match ? parseFloat(match[1]!) : 0;
+			// Helper to parse width value from flexBasis string and convert back to character width
+			const parseWidthChars = (basis: string): number => {
+				const fontWidth = this.actualFontCharacterWidth ?? this.charWidth;
+
+				// Try to parse px, %, or ch
+				const pxMatch = basis.match(/^(\d+(?:\.\d+)?)px$/);
+				if (pxMatch) {
+					return parseFloat(pxMatch[1]!) / fontWidth;
+				}
+
+				const percentMatch = basis.match(/^(\d+(?:\.\d+)?)%$/);
+				if (percentMatch) {
+					const percent = parseFloat(percentMatch[1]!);
+					const pxValue = (percent / 100) * this.containerWidth;
+					return pxValue / fontWidth;
+				}
+
+				const chMatch = basis.match(/^(\d+(?:\.\d+)?)ch$/);
+				if (chMatch) {
+					return parseFloat(chMatch[1]!);
+				}
+
+				return 0;
 			};
 
 			for (let i = 0; i < sortedSegments.length; i++) {
@@ -605,15 +650,15 @@ export class HtmlTarget extends BaseTarget {
 
 					if (lastNode && lastNode.props && lastNode.props.style && typeof lastNode.props.style === 'object' && !Array.isArray(lastNode.props.style)) {
 						const style = lastNode.props.style as HtmlStyle;
-						// Get current flexBasis ch value and add spacer width
+						// Get current flexBasis value and add spacer width
 						const currentBasis = style.flexBasis as string | undefined;
 						if (currentBasis) {
-							const currentWidthChars = parseCh(currentBasis);
+							const currentWidthChars = parseWidthChars(currentBasis);
 							const combinedWidthChars = currentWidthChars + spacerWidth;
-							style.flexBasis = quantizedCh(combinedWidthChars);
+							style.flexBasis = quantizedWidth(combinedWidthChars);
 						} else {
 							// No existing basis, just add spacer
-							style.flexBasis = quantizedCh(spacerWidth);
+							style.flexBasis = quantizedWidth(spacerWidth);
 						}
 					}
 				} else if (segmentStart > lastEndPosition && flexNodes.length === 0) {
@@ -623,18 +668,18 @@ export class HtmlTarget extends BaseTarget {
 						type: 'span',
 						props: {
 							style: {
-								flexBasis: quantizedCh(spacerWidth),
+								flexBasis: quantizedWidth(spacerWidth),
 							},
 						},
 					} as HtmlElement);
 				}
 
-				// Add the text segment with quantized width in ch units
-				const segmentCh = quantizedCh(segmentWidth);
+				// Add the text segment with quantized width in the configured unit
+				const segmentWidthValue = quantizedWidth(segmentWidth);
 
 				// Separate layout styles (for flex cell) from content styles (for text content)
 				const layoutStyle: HtmlStyle = {
-					flexBasis: segmentCh,
+					flexBasis: segmentWidthValue,
 					whiteSpace: 'pre',
 				};
 
@@ -672,11 +717,11 @@ export class HtmlTarget extends BaseTarget {
 					const style = lastNode.props.style as HtmlStyle;
 					const currentBasis = style.flexBasis as string | undefined;
 					if (currentBasis) {
-						const currentWidthChars = parseCh(currentBasis);
+						const currentWidthChars = parseWidthChars(currentBasis);
 						const combinedWidthChars = currentWidthChars + finalSpacerWidth;
-						style.flexBasis = quantizedCh(combinedWidthChars);
+						style.flexBasis = quantizedWidth(combinedWidthChars);
 					} else {
-						style.flexBasis = quantizedCh(finalSpacerWidth);
+						style.flexBasis = quantizedWidth(finalSpacerWidth);
 					}
 				}
 			}
@@ -690,7 +735,7 @@ export class HtmlTarget extends BaseTarget {
 					display: 'flex',
 					flexDirection: 'row',
 					height: `${minHeight}px`,
-					width: `${totalWidthChars}ch`,
+					width: this.toWidthUnit(totalWidthChars),
 				},
 				children: flexNodes,
 			},
@@ -759,7 +804,7 @@ export class HtmlTarget extends BaseTarget {
 			props: {
 				src: `data:image/png;base64,${image}`,
 				style: cleanStyle({
-					maxWidth: `${this.lineWidth}ch`,
+					maxWidth: this.toWidthUnit(this.lineWidth),
 				}),
 				width: `${width}`,
 				height: `${height}`,
@@ -772,8 +817,8 @@ export class HtmlTarget extends BaseTarget {
 			props: {
 				style: {
 					justifyContent,
-					paddingLeft: `${this.lineMargin}ch`,
-					width: `${this.lineWidth}ch`,
+					paddingLeft: this.toWidthUnit(this.lineMargin),
+					width: this.toWidthUnit(this.lineWidth),
 					display: 'flex',
 				},
 				children: imgNode,
@@ -822,8 +867,8 @@ export class HtmlTarget extends BaseTarget {
 			props: {
 				style: {
 					justifyContent,
-					paddingLeft: `${this.lineMargin}ch`,
-					width: `${this.lineWidth}ch`,
+					paddingLeft: this.toWidthUnit(this.lineMargin),
+					width: this.toWidthUnit(this.lineWidth),
 					display: 'flex',
 				},
 				children: [qrHtml],
@@ -896,8 +941,8 @@ export class HtmlTarget extends BaseTarget {
 				props: {
 					style: {
 						justifyContent,
-						paddingLeft: `${this.lineMargin}ch`,
-						width: `${this.lineWidth}ch`,
+						paddingLeft: this.toWidthUnit(this.lineMargin),
+						width: this.toWidthUnit(this.lineWidth),
 						display: 'flex',
 					},
 					children: svgNode,
