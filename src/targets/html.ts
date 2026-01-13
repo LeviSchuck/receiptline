@@ -212,7 +212,7 @@ export class HtmlTarget extends BaseTarget {
 					marginLeft: `${this.lineMargin}ch`,
 					width: `${width}ch`,
 					height: '0',
-					display: 'block',
+					display: 'flex',
 				},
 			},
 		};
@@ -284,7 +284,7 @@ export class HtmlTarget extends BaseTarget {
 				viewBox: `0 0 ${viewBoxWidth} ${viewBoxHeight}`,
 				preserveAspectRatio: 'none',
 				style: {
-					display: 'block',
+					display: 'flex',
 					marginLeft: `${this.lineMargin}ch`,
 				},
 				children: {
@@ -336,7 +336,6 @@ export class HtmlTarget extends BaseTarget {
 				viewBox: `0 0 ${viewBoxWidth} ${viewBoxHeight}`,
 				preserveAspectRatio: 'none',
 				style: {
-					display: 'block',
 					marginLeft: `${this.lineMargin}ch`,
 				},
 				children: {
@@ -405,7 +404,6 @@ export class HtmlTarget extends BaseTarget {
 				viewBox: `0 0 ${viewBoxWidth} ${viewBoxHeight}`,
 				preserveAspectRatio: 'none',
 				style: {
-					display: 'block',
 					marginLeft: `${this.lineMargin + Math.max(-dl, 0)}ch`,
 				},
 				children: [
@@ -456,7 +454,7 @@ export class HtmlTarget extends BaseTarget {
 							style: {
 								flex: '1',
 								borderTop: '2px dashed black',
-								display: 'block',
+								display: 'flex',
 							},
 						},
 					} as HtmlElement,
@@ -493,7 +491,7 @@ export class HtmlTarget extends BaseTarget {
 		const w = wh < 2 ? wh + 1 : wh - 1;
 		const h = wh < 3 ? wh : wh - 1;
 		this.currentStyles.fontSize = `${h}em`;
-		this.currentStyles.display = 'block';
+		this.currentStyles.display = 'flex';
 		if (w !== h) {
 			this.currentStyles.transform = `scaleX(${w / h})`;
 			this.currentStyles.transformOrigin = 'left';
@@ -558,7 +556,7 @@ export class HtmlTarget extends BaseTarget {
 							position: 'relative',
 							width: `${this.containerWidth}px`,
 							height: `${minHeight}px`,
-							display: 'block',
+							display: 'flex',
 						},
 						children: this.pendingVrSvg,
 					},
@@ -707,7 +705,7 @@ export class HtmlTarget extends BaseTarget {
 						position: 'relative',
 						width: `${this.containerWidth}px`,
 						minHeight: `${minHeight}px`,
-						display: 'block',
+						display: 'flex',
 					},
 					children: [
 						// VR SVG positioned absolutely behind text
@@ -749,7 +747,7 @@ export class HtmlTarget extends BaseTarget {
 	// print image:
 	override async image(image: string): Promise<string> {
 		// Image is provided as base64 PNG
-		const textAlign = this.lineAlign === 0 ? 'left' : this.lineAlign === 1 ? 'center' : 'right';
+		const justifyContent = this.lineAlign === 0 ? 'flex-start' : this.lineAlign === 1 ? 'center' : 'flex-end';
 
 		const imageBytes = decodeBase64(image);
 		const metadata = readPngIHDR(imageBytes);
@@ -773,10 +771,10 @@ export class HtmlTarget extends BaseTarget {
 			type: 'div',
 			props: {
 				style: {
-					textAlign,
+					justifyContent,
 					paddingLeft: `${this.lineMargin}ch`,
 					width: `${this.lineWidth}ch`,
-					display: 'block',
+					display: 'flex',
 				},
 				children: imgNode,
 			},
@@ -788,6 +786,7 @@ export class HtmlTarget extends BaseTarget {
 
 	// print QR Code (async version using PNG):
 	override async qrcode(symbol: QRCode, _encoding: Encoding): Promise<string> {
+		const justifyContent = this.lineAlign === 0 ? 'flex-start' : this.lineAlign === 1 ? 'center' : 'flex-end';
 		// Generate QR code using tiny-qr
 		const qr = qrCode({
 			data: symbol.data,
@@ -818,15 +817,14 @@ export class HtmlTarget extends BaseTarget {
 		} as HtmlElement;
 
 		// Wrap in container for alignment
-		const textAlign = this.lineAlign === 0 ? 'left' : this.lineAlign === 1 ? 'center' : 'right';
 		const containerNode: HtmlElement = {
 			type: 'div',
 			props: {
 				style: {
-					textAlign,
+					justifyContent,
 					paddingLeft: `${this.lineMargin}ch`,
 					width: `${this.lineWidth}ch`,
-					display: 'block',
+					display: 'flex',
 				},
 				children: [qrHtml],
 			},
@@ -841,6 +839,7 @@ export class HtmlTarget extends BaseTarget {
 	override async barcode(symbol: Barcode, _encoding: Encoding): Promise<string> {
 		const bar = generateBarcode(symbol as BarcodeSymbol);
 		const h = bar.height;
+		const justifyContent = this.lineAlign === 0 ? 'flex-start' : this.lineAlign === 1 ? 'center' : 'flex-end';
 
 		if (h !== undefined && 'length' in bar && bar.length !== undefined && bar.widths) {
 			const width = bar.length;
@@ -887,23 +886,19 @@ export class HtmlTarget extends BaseTarget {
 					width: `${width}`,
 					height: `${height}`,
 					viewBox: `0 0 ${width} ${height}`,
-					style: {
-						display: 'block',
-					},
 					children: svgChildren,
 				},
 			};
 
 			// Wrap in container for alignment
-			const textAlign = this.lineAlign === 0 ? 'left' : this.lineAlign === 1 ? 'center' : 'right';
 			const containerNode: HtmlElement = {
 				type: 'div',
 				props: {
 					style: {
-						textAlign,
+						justifyContent,
 						paddingLeft: `${this.lineMargin}ch`,
 						width: `${this.lineWidth}ch`,
-						display: 'block',
+						display: 'flex',
 					},
 					children: svgNode,
 				},
