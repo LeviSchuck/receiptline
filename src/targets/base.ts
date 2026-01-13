@@ -317,6 +317,18 @@ export class BaseTarget implements BaseTargetInterface {
 	}
 
 	/**
+	 * Set column context for text alignment.
+	 * @param {number} index column index (0-based)
+	 * @param {number} start column start position (unit: characters)
+	 * @param {number} width column width (unit: characters)
+	 * @param {number} align text alignment within column (0: left, 1: center, 2: right)
+	 * @returns {Promise<string>} commands
+	 */
+	async column(index: number, start: number, width: number, align: number): Promise<string> {
+		return '';
+	}
+
+	/**
 	 * Print horizontal rule.
 	 * @param {number} width line width (unit: characters)
 	 * @returns {Promise<string>} commands

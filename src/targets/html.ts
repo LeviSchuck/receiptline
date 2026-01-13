@@ -26,12 +26,20 @@ function cleanStyle(style: Record<string, string | undefined>): HtmlStyle {
  * Represents a text segment queued for rendering on a line.
  * Receipt printers accumulate positioning and text commands, then render on linefeed.
  */
+interface ColumnInfo {
+	index: number;        // Column index (0-based)
+	start: number;        // Column start position in characters
+	width: number;        // Column width in characters
+	align: number;        // Text alignment (0: left, 1: center, 2: right)
+}
+
 interface LineSegment {
 	position: number;     // Absolute position in characters where this segment starts
 	text: string;         // The text content (already HTML escaped)
 	styles: HtmlStyle;    // CSS styles for this segment
 	scale: number;        // Horizontal scale factor (affects visual width)
 	charWidth: number;    // Width of text in characters (for position calculation)
+	columnInfo: ColumnInfo | null;  // Column context from parser (if available)
 }
 
 /**
@@ -64,6 +72,7 @@ export class HtmlTarget extends BaseTarget {
 	currentPosition: number = 0;      // Current cursor position in characters
 	lineSegments: LineSegment[] = []; // Queued text segments for current line
 	pendingVrSvg: HtmlElement | null = null; // Pending vertical rules SVG for overlay with text
+	currentColumnInfo: ColumnInfo | null = null; // Current column context from parser
 
 	// start printing:
 	override async open(printer: ParsedPrinter): Promise<string> {
@@ -91,6 +100,7 @@ export class HtmlTarget extends BaseTarget {
 		this.currentPosition = 0;
 		this.lineSegments = [];
 		this.pendingVrSvg = null;
+		this.currentColumnInfo = null;
 		return '';
 	}
 
@@ -225,6 +235,12 @@ export class HtmlTarget extends BaseTarget {
 	override async relative(position: number): Promise<string> {
 		// Move cursor forward by relative amount
 		this.currentPosition += position;
+		return '';
+	}
+
+	// set column context for text alignment:
+	override async column(index: number, start: number, width: number, align: number): Promise<string> {
+		this.currentColumnInfo = { index, start, width, align };
 		return '';
 	}
 
@@ -546,13 +562,14 @@ export class HtmlTarget extends BaseTarget {
 		// Measure text width in characters (accounting for encoding)
 		const textWidth = this.measureText(text, encoding);
 
-		// Queue the segment with its position
+		// Queue the segment with its position and column context
 		const segment: LineSegment = {
 			position: this.currentPosition,
 			text: escaped,
 			styles: { ...this.currentStyles },
 			scale: this.textScale,
 			charWidth: textWidth,
+			columnInfo: this.currentColumnInfo ? { ...this.currentColumnInfo } : null,
 		};
 		this.lineSegments.push(segment);
 
@@ -595,133 +612,237 @@ export class HtmlTarget extends BaseTarget {
 			this.lineHeight = 1;
 			this.lineSegments = [];
 			this.currentPosition = 0;
+			this.currentColumnInfo = null;
 			return '';
 		} else {
-			// Sort segments by position to ensure correct order
-			const sortedSegments = [...this.lineSegments].sort((a, b) => a.position - b.position);
+			// Check if all segments have column info for column-based layout
+			const hasColumnInfo = this.lineSegments.every(s => s.columnInfo !== null);
 
-			let lastEndPosition = 0;
+			if (hasColumnInfo) {
+				// Column-based layout: use explicit column widths and text-align
+				const alignNames = ['left', 'center', 'right'] as const;
 
-			// Helper to quantize width to nearest character width
-			const quantizeWidth = (widthChars: number): number => {
-				return Math.floor(widthChars);
-			};
-
-			// Helper to calculate quantized width in the configured unit
-			const quantizedWidth = (widthChars: number): string => {
-				const quantized = quantizeWidth(widthChars);
-				return this.toWidthUnit(quantized);
-			};
-
-			// Helper to parse width value from flexBasis string and convert back to character width
-			const parseWidthChars = (basis: string): number => {
-				const fontWidth = this.actualFontCharacterWidth ?? this.charWidth;
-
-				// Try to parse px, %, or ch
-				const pxMatch = basis.match(/^(\d+(?:\.\d+)?)px$/);
-				if (pxMatch) {
-					return parseFloat(pxMatch[1]!) / fontWidth;
+				// Group segments by column index
+				const columnGroups = new Map<number, LineSegment[]>();
+				for (const segment of this.lineSegments) {
+					const idx = segment.columnInfo!.index;
+					if (!columnGroups.has(idx)) columnGroups.set(idx, []);
+					columnGroups.get(idx)!.push(segment);
 				}
 
-				const percentMatch = basis.match(/^(\d+(?:\.\d+)?)%$/);
-				if (percentMatch) {
-					const percent = parseFloat(percentMatch[1]!);
-					const pxValue = (percent / 100) * this.containerWidth;
-					return pxValue / fontWidth;
-				}
-
-				const chMatch = basis.match(/^(\d+(?:\.\d+)?)ch$/);
-				if (chMatch) {
-					return parseFloat(chMatch[1]!);
-				}
-
-				return 0;
-			};
-
-			for (let i = 0; i < sortedSegments.length; i++) {
-				const segment = sortedSegments[i]!;
-				const segmentStart = this.lineMargin + segment.position;
-				const segmentWidth = segment.charWidth * segment.scale;
-
-				// Merge spacer with previous column if there's a gap
-				if (segmentStart > lastEndPosition && flexNodes.length > 0) {
-					const spacerWidth = segmentStart - lastEndPosition;
-					const lastNode = flexNodes[flexNodes.length - 1] as HtmlElement;
-
-					if (lastNode && lastNode.props && lastNode.props.style && typeof lastNode.props.style === 'object' && !Array.isArray(lastNode.props.style)) {
-						const style = lastNode.props.style as HtmlStyle;
-						// Get current flexBasis value and add spacer width
-						const currentBasis = style.flexBasis as string | undefined;
-						if (currentBasis) {
-							const currentWidthChars = parseWidthChars(currentBasis);
-							const combinedWidthChars = currentWidthChars + spacerWidth;
-							style.flexBasis = quantizedWidth(combinedWidthChars);
-						} else {
-							// No existing basis, just add spacer
-							style.flexBasis = quantizedWidth(spacerWidth);
-						}
-					}
-				} else if (segmentStart > lastEndPosition && flexNodes.length === 0) {
-					// First element has leading spacer - create initial spacer column
-					const spacerWidth = segmentStart - lastEndPosition;
+				// Add leading margin spacer if needed
+				if (this.lineMargin > 0) {
 					flexNodes.push({
 						type: 'span',
 						props: {
 							style: {
-								flexBasis: quantizedWidth(spacerWidth),
+								flexBasis: this.toWidthUnit(this.lineMargin),
 							},
 						},
 					} as HtmlElement);
 				}
 
-				// Add the text segment with quantized width in the configured unit
-				const segmentWidthValue = quantizedWidth(segmentWidth);
+				// Track current position to detect border gaps
+				let currentPos = this.lineMargin;
 
-				// Separate layout styles (for flex cell) from content styles (for text content)
-				const layoutStyle: HtmlStyle = {
-					flexBasis: segmentWidthValue,
-					whiteSpace: 'pre',
-				};
+				// Sort columns by index and create flex cells with border spacers
+				const sortedColumns = [...columnGroups.entries()].sort((a, b) => a[0] - b[0]);
+				for (const [_colIndex, segments] of sortedColumns) {
+					const colInfo = segments[0]!.columnInfo!;
 
-				// Content styles should only apply to the text content, not the flex cell
-				const hasContentStyles = segment.styles && Object.keys(segment.styles).length > 0;
-				const contentStyle = hasContentStyles ? segment.styles : undefined;
-
-				// Create outer flex cell with layout styles
-				const outerSpan: HtmlElement = {
-					type: 'span',
-					props: {
-						style: layoutStyle,
-						children: hasContentStyles ? {
-							// Wrap text in inner span with content styles
+					// Add spacer for border/gap if column starts after current position
+					const columnStart = this.lineMargin + colInfo.start;
+					if (columnStart > currentPos) {
+						const gapWidth = columnStart - currentPos;
+						flexNodes.push({
 							type: 'span',
 							props: {
-								style: contentStyle,
-								children: segment.text,
+								style: {
+									flexBasis: this.toWidthUnit(gapWidth),
+								},
 							},
-						} as HtmlElement : segment.text,
-					},
+						} as HtmlElement);
+						currentPos = columnStart;
+					}
+
+					// Determine text alignment CSS
+					const textAlign = alignNames[colInfo.align] ?? 'center';
+					const justifyContent = colInfo.align === 0 ? 'flex-start' :
+					                       colInfo.align === 2 ? 'flex-end' : 'center';
+
+					// Create text spans for all segments in this column
+					const textSpans: HtmlNode[] = segments.map(segment => {
+						const hasContentStyles = segment.styles && Object.keys(segment.styles).length > 0;
+						if (hasContentStyles) {
+							return {
+								type: 'span',
+								props: {
+									style: segment.styles,
+									children: segment.text,
+								},
+							} as HtmlElement;
+						}
+						return segment.text;
+					});
+
+					// Create column flex cell with explicit width and alignment
+					const columnCell: HtmlElement = {
+						type: 'span',
+						props: {
+							style: {
+								flexBasis: this.toWidthUnit(colInfo.width),
+								whiteSpace: 'pre',
+								display: 'flex',
+								justifyContent,
+								textAlign,
+							},
+							children: textSpans.length === 1 ? textSpans[0] : textSpans,
+						},
+					};
+
+					flexNodes.push(columnCell);
+					currentPos = columnStart + colInfo.width;
+				}
+
+				// Add trailing spacer if needed (for trailing border)
+				if (currentPos < totalWidthChars) {
+					const trailingGap = totalWidthChars - currentPos;
+					flexNodes.push({
+						type: 'span',
+						props: {
+							style: {
+								flexBasis: this.toWidthUnit(trailingGap),
+							},
+						},
+					} as HtmlElement);
+				}
+			} else {
+				// Position-based layout: fall back to old logic when no column info
+				const sortedSegments = [...this.lineSegments].sort((a, b) => a.position - b.position);
+
+				let lastEndPosition = 0;
+
+				// Helper to quantize width to nearest character width
+				const quantizeWidth = (widthChars: number): number => {
+					return Math.floor(widthChars);
 				};
 
-				flexNodes.push(outerSpan);
+				// Helper to calculate quantized width in the configured unit
+				const quantizedWidth = (widthChars: number): string => {
+					const quantized = quantizeWidth(widthChars);
+					return this.toWidthUnit(quantized);
+				};
 
-				lastEndPosition = segmentStart + segmentWidth;
-			}
+				// Helper to parse width value from flexBasis string and convert back to character width
+				const parseWidthChars = (basis: string): number => {
+					const fontWidth = this.actualFontCharacterWidth ?? this.charWidth;
 
-			// Merge final spacer with last column if needed
-			if (lastEndPosition < totalWidthChars && flexNodes.length > 0) {
-				const finalSpacerWidth = totalWidthChars - lastEndPosition;
-				const lastNode = flexNodes[flexNodes.length - 1] as HtmlElement;
+					// Try to parse px, %, or ch
+					const pxMatch = basis.match(/^(\d+(?:\.\d+)?)px$/);
+					if (pxMatch) {
+						return parseFloat(pxMatch[1]!) / fontWidth;
+					}
 
-				if (lastNode && lastNode.props && lastNode.props.style && typeof lastNode.props.style === 'object' && !Array.isArray(lastNode.props.style)) {
-					const style = lastNode.props.style as HtmlStyle;
-					const currentBasis = style.flexBasis as string | undefined;
-					if (currentBasis) {
-						const currentWidthChars = parseWidthChars(currentBasis);
-						const combinedWidthChars = currentWidthChars + finalSpacerWidth;
-						style.flexBasis = quantizedWidth(combinedWidthChars);
-					} else {
-						style.flexBasis = quantizedWidth(finalSpacerWidth);
+					const percentMatch = basis.match(/^(\d+(?:\.\d+)?)%$/);
+					if (percentMatch) {
+						const percent = parseFloat(percentMatch[1]!);
+						const pxValue = (percent / 100) * this.containerWidth;
+						return pxValue / fontWidth;
+					}
+
+					const chMatch = basis.match(/^(\d+(?:\.\d+)?)ch$/);
+					if (chMatch) {
+						return parseFloat(chMatch[1]!);
+					}
+
+					return 0;
+				};
+
+				for (let i = 0; i < sortedSegments.length; i++) {
+					const segment = sortedSegments[i]!;
+					const segmentStart = this.lineMargin + segment.position;
+					const segmentWidth = segment.charWidth * segment.scale;
+
+					// Merge spacer with previous column if there's a gap
+					if (segmentStart > lastEndPosition && flexNodes.length > 0) {
+						const spacerWidth = segmentStart - lastEndPosition;
+						const lastNode = flexNodes[flexNodes.length - 1] as HtmlElement;
+
+						if (lastNode && lastNode.props && lastNode.props.style && typeof lastNode.props.style === 'object' && !Array.isArray(lastNode.props.style)) {
+							const style = lastNode.props.style as HtmlStyle;
+							// Get current flexBasis value and add spacer width
+							const currentBasis = style.flexBasis as string | undefined;
+							if (currentBasis) {
+								const currentWidthChars = parseWidthChars(currentBasis);
+								const combinedWidthChars = currentWidthChars + spacerWidth;
+								style.flexBasis = quantizedWidth(combinedWidthChars);
+							} else {
+								// No existing basis, just add spacer
+								style.flexBasis = quantizedWidth(spacerWidth);
+							}
+						}
+					} else if (segmentStart > lastEndPosition && flexNodes.length === 0) {
+						// First element has leading spacer - create initial spacer column
+						const spacerWidth = segmentStart - lastEndPosition;
+						flexNodes.push({
+							type: 'span',
+							props: {
+								style: {
+									flexBasis: quantizedWidth(spacerWidth),
+								},
+							},
+						} as HtmlElement);
+					}
+
+					// Add the text segment with quantized width in the configured unit
+					const segmentWidthValue = quantizedWidth(segmentWidth);
+
+					// Separate layout styles (for flex cell) from content styles (for text content)
+					const layoutStyle: HtmlStyle = {
+						flexBasis: segmentWidthValue,
+						whiteSpace: 'pre',
+					};
+
+					// Content styles should only apply to the text content, not the flex cell
+					const hasContentStyles = segment.styles && Object.keys(segment.styles).length > 0;
+					const contentStyle = hasContentStyles ? segment.styles : undefined;
+
+					// Create outer flex cell with layout styles
+					const outerSpan: HtmlElement = {
+						type: 'span',
+						props: {
+							style: layoutStyle,
+							children: hasContentStyles ? {
+								// Wrap text in inner span with content styles
+								type: 'span',
+								props: {
+									style: contentStyle,
+									children: segment.text,
+								},
+							} as HtmlElement : segment.text,
+						},
+					};
+
+					flexNodes.push(outerSpan);
+
+					lastEndPosition = segmentStart + segmentWidth;
+				}
+
+				// Merge final spacer with last column if needed
+				if (lastEndPosition < totalWidthChars && flexNodes.length > 0) {
+					const finalSpacerWidth = totalWidthChars - lastEndPosition;
+					const lastNode = flexNodes[flexNodes.length - 1] as HtmlElement;
+
+					if (lastNode && lastNode.props && lastNode.props.style && typeof lastNode.props.style === 'object' && !Array.isArray(lastNode.props.style)) {
+						const style = lastNode.props.style as HtmlStyle;
+						const currentBasis = style.flexBasis as string | undefined;
+						if (currentBasis) {
+							const currentWidthChars = parseWidthChars(currentBasis);
+							const combinedWidthChars = currentWidthChars + finalSpacerWidth;
+							style.flexBasis = quantizedWidth(combinedWidthChars);
+						} else {
+							style.flexBasis = quantizedWidth(finalSpacerWidth);
+						}
 					}
 				}
 			}
@@ -780,6 +901,7 @@ export class HtmlTarget extends BaseTarget {
 		this.lineHeight = 1;
 		this.lineSegments = [];
 		this.currentPosition = 0;
+		this.currentColumnInfo = null;
 		return '';
 	}
 

@@ -23,6 +23,7 @@ export interface BaseTargetInterface {
 	align(align: number): Promise<string>;
 	absolute(position: number): Promise<string>;
 	relative(position: number): Promise<string>;
+	column(index: number, start: number, width: number, align: number): Promise<string>;
 	hr(width: number): Promise<string>;
 	vr(widths: number[], height: number): Promise<string>;
 	vrstart(widths: number[]): Promise<string>;

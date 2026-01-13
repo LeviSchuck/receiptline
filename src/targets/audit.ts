@@ -89,6 +89,20 @@ export class AuditTarget extends BaseTarget {
 	}
 
 	/**
+	 * Set column context for text alignment.
+	 * @param {number} index column index (0-based)
+	 * @param {number} start column start position (unit: characters)
+	 * @param {number} width column width (unit: characters)
+	 * @param {number} align text alignment within column (0: left, 1: center, 2: right)
+	 * @returns {Promise<string>} empty string
+	 */
+	override async column(index: number, start: number, width: number, align: number): Promise<string> {
+		const alignNames = ['left', 'center', 'right'];
+		this.logs.push(`column(index: ${index}, start: ${start}, width: ${width}, align: ${alignNames[align] ?? align})`);
+		return '';
+	}
+
+	/**
 	 * Print horizontal rule.
 	 * @param {number} width line width (unit: characters)
 	 * @returns {Promise<string>} empty string

@@ -542,6 +542,8 @@ export async function createLine(line: ParsedColumn[], printer: ParsedPrinter, s
 			for (let i = 0; i < cols.length; i++) {
 				const col = cols[i];
 				if (!col) continue;
+				// emit column metadata for targets that use it (HTML uses this for text-align)
+				res += await printer.target.column(i, p, columns[i]?.width ?? 0, columns[i]?.align ?? 1);
 				// append commands to set print position of first column
 				res += await printer.target.absolute(p);
 				// if wrapped text is not empty
