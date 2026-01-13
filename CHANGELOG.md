@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.0.5...receiptline-v0.1.0) (2026-01-13)
+
+
+### Features
+
+* HTML Target ([#7](https://github.com/LeviSchuck/receiptline/issues/7)) ([e47cbb8](https://github.com/LeviSchuck/receiptline/commit/e47cbb80c7eaacdfb70658d81728e7c65f794941))
+
 ## [0.0.5](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.0.4...receiptline-v0.0.5) (2026-01-09)
 
 
