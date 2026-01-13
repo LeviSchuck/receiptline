@@ -69,42 +69,8 @@ const {content: html, width: htmlWidth, height: htmlHeight} = await transform(bo
   charWidth: charWidth,
   target: htmlTarget,
 });
-const body = `Example Receipt
-(Merchant Copy)
----
-
-{w: * 4 8}
-{b:line}
-|Product | Qty| Price
---
-|Pad Thai | 1| 14.99
-|Spring Roll | 1| 4.99
---
-{w:* 8}
-| Subtotal| 19.98
-| Tax (6%)| 1.20
-| Convenience Fee| 0.99
-| Total| 22.17
----
-{b:space}
-{w:auto}
-Please Sign:
-
-
-
----
-
-{c:https://levischuck.com;o:qrcode,6}
-
-Please Take our Survey`;
-
-const {svg, width, height} = await transform(body, {
-  cpl: charactersPerLine,
-  charWidth: charWidth,
-  target: svgTarget,
-});
-
-// Do something interesting with the svg afterwards
+c
+// Do something interesting with the SVG or HTML afterwards
 ```
 
 ## Method
@@ -145,19 +111,19 @@ const {svg, width, height} = await transform(body, {
 
 ## HTML Target Configuration
 
-The HTML target provides additional configuration options for precise control over the generated HTML document:
+The HTML target provides additional configuration options to account for differences with web fonts and the defaults this library expects for a thermal printer.
 
 - `setDefaultFont(font: string)` - Sets the CSS font-family for the receipt (default: "'Courier Prime', monospace")
-- `setActualFontCharacterWidth(width: number | undefined)` - Sets the actual measured character width of your font in pixels. This ensures proper text layout calculations when using non-monospaced fonts (optional, defaults to undefined)
-- `setCharHeight(height: number | undefined)` - Explicitly sets the character height in pixels. If not set, defaults to `charWidth * 2`
+- `setActualFontCharacterWidth(width: number | undefined)` - Sets the actual measured character width of your font in pixels. It'll keep the text from going off the side when correctly set.
+- `setCharHeight(height: number | undefined)` - Explicitly sets the character height in pixels. If not set, defaults to `charWidth * 2` (usually 12 * 2)
 
-When using the HTML target, you may need to measure your font's actual character width for optimal layout. This is especially important when using web fonts that may not be perfectly monospaced.
+When using the HTML target, you may need to measure your font's actual character width for optimal layout. This is especially important when using web fonts that don't fit the 12 dot wide, 24 dot tall convention.
 
 ```javascript
 const htmlTarget = new HtmlTarget();
 htmlTarget.setDefaultFont("'Google Sans Code', monospace");
-htmlTarget.setActualFontCharacterWidth(13.2); // Measured width of Google Sans Code
-htmlTarget.setCharHeight(24); // 24px character height
+htmlTarget.setActualFontCharacterWidth(13.2);
+htmlTarget.setCharHeight(24.7);
 ```
 
 # Examples
