@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.1.2...receiptline-v0.1.3) (2026-01-13)
+
+
+### Bug Fixes
+
+* Provide more size options. '%' seems to be the most stable if ch is not available ([2eb0a7e](https://github.com/LeviSchuck/receiptline/commit/2eb0a7ed1f92eac1e25d440a10c3c276cc2a9c6b))
+
 ## [0.1.2](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.1.1...receiptline-v0.1.2) (2026-01-13)
 
 
