@@ -53,7 +53,7 @@ Please Take our Survey`;
 // SVG Target
 const svgTarget = new SvgTarget();
 svgTarget.setDefaultFont("'Atkinson Hyperlegible Mono'");
-const {svg, width, height} = await transform(body, {
+const {content: svg, width, height} = await transform(body, {
   cpl: charactersPerLine,
   charWidth: charWidth,
   target: svgTarget,
@@ -64,7 +64,7 @@ const htmlTarget = new HtmlTarget();
 htmlTarget.setDefaultFont("'Google Sans Code', monospace");
 htmlTarget.setActualFontCharacterWidth(13.2); // Actual measured width of your font
 htmlTarget.setCharHeight(24); // Character height in pixels
-const {svg: html, width: htmlWidth, height: htmlHeight} = await transform(body, {
+const {content: html, width: htmlWidth, height: htmlHeight} = await transform(body, {
   cpl: charactersPerLine,
   charWidth: charWidth,
   target: htmlTarget,
@@ -120,7 +120,9 @@ const {svg, width, height} = await transform(body, {
 
 ### Return value
 
-- SVG Image (for SvgTarget) or HTML string (for HtmlTarget) with expected width and height
+- `content`: SVG Image (for SvgTarget) or HTML string (for HtmlTarget)
+- `width`: Width of the generated content in pixels
+- `height`: Height of the generated content in pixels
 
 ## Printer configuration
 

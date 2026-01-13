@@ -28,9 +28,9 @@ export { AuditTarget } from './targets/audit.ts';
  * This is an async function to support targets that need async operations (e.g., PNG generation).
  * @param {string} doc ReceiptLine document
  * @param {object} [printer] printer configuration
- * @returns {Promise<{svg: string, width: number, height: number}>} result with output string, width, and height
+ * @returns {Promise<{content: string, width: number, height: number}>} result with output string, width, and height
  */
-export async function transform(doc: string, printer: Printer): Promise<{svg: string, width: number, height: number}> {
+export async function transform(doc: string, printer: Printer): Promise<{content: string, width: number, height: number}> {
 	// validate printer configuration
 	const ptr = parseOption(printer);
 
@@ -86,7 +86,7 @@ export async function transform(doc: string, printer: Printer): Promise<{svg: st
 		// append commands to end printing (await in case target has async close)
 		result += await ptr.target.close();
 		return {
-			svg: result,
+			content: result,
 			width: ptr.target.calculatedWidth(),
 			height: Math.round(ptr.target.calculatedHeight())
 		};

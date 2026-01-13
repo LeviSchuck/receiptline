@@ -72,7 +72,7 @@ function App() {
           cpl: cpl,
           charWidth: charWidth,
         });
-        setOutput(result.svg);
+        setOutput(result.content);
         setWidth(result.width);
         setHeight(result.height);
       } catch (err) {
