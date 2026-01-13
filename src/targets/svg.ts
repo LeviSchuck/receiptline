@@ -303,12 +303,13 @@ export class SvgTarget extends BaseTarget {
 		});
 		// Extract the path string - handle both string and object responses
 		const path = typeof result === 'string' ? result : (result as any).path || (result as any).svg || String(result);
-		const x = Math.floor(this.lineMargin * this.charWidth);
+		const qrWidth = h * c + (symbol.quietZone ? 8 : 0);
+		const margin = Math.floor(this.lineMargin * this.charWidth + (this.lineWidth * this.charWidth - qrWidth) * this.lineAlign / 2);
 		const y = Math.floor(this.svgHeight);
-		this.svgContent += `<g transform="translate(${x},${y})" shape-rendering="crispEdges">
+		this.svgContent += `<g transform="translate(${margin},${y})" shape-rendering="crispEdges">
 			<path d="${path}" stroke="transparent" fill="black" shape-rendering="crispEdges" />
 		</g>`;
-		this.svgHeight += h * c + (symbol.quietZone ? 8 : 0);
+		this.svgHeight += qrWidth;
 		return '';
 	}
 

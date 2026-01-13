@@ -798,7 +798,7 @@ export class HtmlTarget extends BaseTarget {
 				width: `${width}`,
 				height: `${height}`,
 				style: {
-					display: 'block',
+					display: 'inline-block',
 					imageRendering: 'pixelated',
 				},
 			},
@@ -874,7 +874,7 @@ export class HtmlTarget extends BaseTarget {
 					height: `${height}`,
 					viewBox: `0 0 ${width} ${height}`,
 					style: {
-						display: 'block',
+						display: 'inline-block',
 					},
 					children: svgChildren,
 				},
