@@ -1,7 +1,7 @@
-# SVG-only ReceiptLine
+# ReceiptLine
 
 Markdown for receipts. Printable digital receipts. &#x1f9fe;
-Generate receipt printer commands and images.
+Generate receipt printer commands, SVG images, and HTML documents.
 
 ReceiptLine is the receipt description language that expresses the output image of small roll paper.
 It supports printing paper receipts using a receipt printer and displaying electronic receipts on a POS system or smartphone.
@@ -15,13 +15,60 @@ $ npm install @levischuck/receiptline
 
 # Usage
 
-`receiptline.transform()` method transforms ReceiptLine document to printer commands or SVG images.
+`receiptline.transform()` method transforms ReceiptLine document to printer commands, SVG images, or HTML documents.
 
 ```javascript
-import { transform, SvgTarget } from "@levischuck/receiptline";
+import { transform, SvgTarget, HtmlTarget } from "@levischuck/receiptline";
 
+const body = `Example Receipt
+(Merchant Copy)
+---
+
+{w: * 4 8}
+{b:line}
+||Product | Qty| Price
+|--
+||Pad Thai | 1| 14.99
+||Spring Roll | 1| 4.99
+|--
+{w:* 8}
+|| Subtotal| 19.98
+|| Tax (6%)| 1.20
+|| Convenience Fee| 0.99
+|| Total| 22.17
+---
+
+{b:space}
+{w:auto}
+Please Sign:
+
+
+
+---
+
+{c:https://levischuck.com;o:qrcode,6}
+
+Please Take our Survey`;
+
+// SVG Target
 const svgTarget = new SvgTarget();
 svgTarget.setDefaultFont("'Atkinson Hyperlegible Mono'");
+const {svg, width, height} = await transform(body, {
+  cpl: charactersPerLine,
+  charWidth: charWidth,
+  target: svgTarget,
+});
+
+// HTML Target
+const htmlTarget = new HtmlTarget();
+htmlTarget.setDefaultFont("'Google Sans Code', monospace");
+htmlTarget.setActualFontCharacterWidth(13.2); // Actual measured width of your font
+htmlTarget.setCharHeight(24); // Character height in pixels
+const {svg: html, width: htmlWidth, height: htmlHeight} = await transform(body, {
+  cpl: charactersPerLine,
+  charWidth: charWidth,
+  target: htmlTarget,
+});
 const body = `Example Receipt
 (Merchant Copy)
 ---
@@ -51,7 +98,7 @@ Please Sign:
 
 Please Take our Survey`;
 
-const {svg, width, height} = transform(body, {
+const {svg, width, height} = await transform(body, {
   cpl: charactersPerLine,
   charWidth: charWidth,
   target: svgTarget,
@@ -73,7 +120,7 @@ const {svg, width, height} = transform(body, {
 
 ### Return value
 
-- SVG Image with expected width and height
+- SVG Image (for SvgTarget) or HTML string (for HtmlTarget) with expected width and height
 
 ## Printer configuration
 
@@ -88,11 +135,28 @@ const {svg, width, height} = transform(body, {
   - print margin (left) (range: `0` - `24`, default: `0`)
 - `marginRight` (for printer)
   - print margin (right) (range: `0` - `24`, default: `0`)
-- `target` What implementation to use (currently only SVG, instantiate your own to set additional configuration like font)
+- `target` What implementation to use (SvgTarget for SVG output, HtmlTarget for HTML output, instantiate your own to set additional configuration like font)
 - `encoding`
   - `multilingual` (default), others exist if you need to look. They mostly adjust line spacing and default fonts.
 
 `cpl * charWidth` will be the output width, which by default is 576 dots.
+
+## HTML Target Configuration
+
+The HTML target provides additional configuration options for precise control over the generated HTML document:
+
+- `setDefaultFont(font: string)` - Sets the CSS font-family for the receipt (default: "'Courier Prime', monospace")
+- `setActualFontCharacterWidth(width: number | undefined)` - Sets the actual measured character width of your font in pixels. This ensures proper text layout calculations when using non-monospaced fonts (optional, defaults to undefined)
+- `setCharHeight(height: number | undefined)` - Explicitly sets the character height in pixels. If not set, defaults to `charWidth * 2`
+
+When using the HTML target, you may need to measure your font's actual character width for optimal layout. This is especially important when using web fonts that may not be perfectly monospaced.
+
+```javascript
+const htmlTarget = new HtmlTarget();
+htmlTarget.setDefaultFont("'Google Sans Code', monospace");
+htmlTarget.setActualFontCharacterWidth(13.2); // Measured width of Google Sans Code
+htmlTarget.setCharHeight(24); // 24px character height
+```
 
 # Examples
 ### example/data/\*
