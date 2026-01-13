@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.1.3...receiptline-v0.1.4) (2026-01-13)
+
+
+### Bug Fixes
+
+* HTML alignment ([023e2e3](https://github.com/LeviSchuck/receiptline/commit/023e2e30757248866440ddef70222e96e83ba21e))
+
 ## [0.1.3](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.1.2...receiptline-v0.1.3) (2026-01-13)
 
 
