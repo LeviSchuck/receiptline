@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.1.1...receiptline-v0.1.2) (2026-01-13)
+
+
+### Bug Fixes
+
+* Use flex and justify for satori compatibility ([c20e0c5](https://github.com/LeviSchuck/receiptline/commit/c20e0c54fa0cd0b37d11cb3f752720afcf08ed79))
+
 ## [0.1.1](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.1.0...receiptline-v0.1.1) (2026-01-13)
 
 
