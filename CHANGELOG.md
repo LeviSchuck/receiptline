@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.1.0...receiptline-v0.1.1) (2026-01-13)
+
+
+### Bug Fixes
+
+* Read png image dimensions and use flex and block, not inline-block ([4ca4a68](https://github.com/LeviSchuck/receiptline/commit/4ca4a68e45aed6b58970cbf4f378926ccd1737c2))
+
 ## [0.1.0](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.0.5...receiptline-v0.1.0) (2026-01-13)
 
 
