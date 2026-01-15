@@ -18,9 +18,9 @@
     "@levischuck/tiny-encodings": "^0.2.11",
     "@levischuck/tiny-html": "^0.1.1",
     "@levischuck/tiny-png": "^0.2.0",
-    "@levischuck/tiny-qr": "^0.0.8",
-    "@levischuck/tiny-qr-png": "^0.0.10",
-    "@levischuck/tiny-qr-svg": "^0.0.8"
+    "@levischuck/tiny-qr": "^0.0.9",
+    "@levischuck/tiny-qr-png": "^0.0.11",
+    "@levischuck/tiny-qr-svg": "^0.0.9"
   },
   "keywords": [
     "kiosk",
