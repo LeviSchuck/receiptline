@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.1.4...receiptline-v0.1.5) (2026-01-15)
+
+
+### Bug Fixes
+
+* Bump tiny-qr ([7c9ae90](https://github.com/LeviSchuck/receiptline/commit/7c9ae90a95dbbc8518d73943d01b535369ea04bb))
+
 ## [0.1.4](https://github.com/LeviSchuck/receiptline/compare/receiptline-v0.1.3...receiptline-v0.1.4) (2026-01-13)
 
 
